@@ -3,8 +3,8 @@
  */
 export const isCentralDomain = (): boolean => {
   const hostname = window.location.hostname;
-  // localhostまたは127.0.0.1はセントラルドメイン
-  const isCentral = hostname === 'localhost' || hostname === '127.0.0.1';
+  // localhost、127.0.0.1、anken.cloudはセントラルドメイン
+  const isCentral = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'anken.cloud';
   
   // デバッグ用ログ
   console.log('[API Utils] Hostname:', hostname);
