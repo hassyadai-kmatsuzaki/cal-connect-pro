@@ -33,12 +33,19 @@ return new class extends Migration
             }
         });
         
-        // Drop old index and create new one
-        Schema::table('hearing_form_items', function (Blueprint $table) {
-            if (Schema::hasColumn('hearing_form_items', 'order')) {
-                $table->index(['hearing_form_id', 'order']);
+        // Create index only if it doesn't exist
+        if (Schema::hasColumn('hearing_form_items', 'order')) {
+            try {
+                Schema::table('hearing_form_items', function (Blueprint $table) {
+                    $table->index(['hearing_form_id', 'order']);
+                });
+            } catch (\Exception $e) {
+                // Index already exists, ignore the error
+                if (strpos($e->getMessage(), 'Duplicate key name') === false) {
+                    throw $e;
+                }
             }
-        });
+        }
     }
 
     /**
