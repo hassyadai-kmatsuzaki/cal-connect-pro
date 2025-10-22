@@ -103,14 +103,14 @@
                             showError('slugパラメータが指定されていません');
                             return;
                         }
-                        redirectUrl = `/booking/${slug}`;
+                        redirectUrl = `/booking/${tenantId}/${slug}`;
                         break;
                     case 'inflow':
                         if (!slug) {
                             showError('slugパラメータが指定されていません');
                             return;
                         }
-                        redirectUrl = `/inflow/${slug}`;
+                        redirectUrl = `/inflow/${tenantId}?slug=${slug}`;
                         break;
                     case 'profile':
                         redirectUrl = `/profile`;

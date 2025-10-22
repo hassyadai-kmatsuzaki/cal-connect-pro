@@ -38,8 +38,10 @@ class TenantController extends Controller
             'plan' => $request->plan ?? 'free',
         ]);
 
-        // サブドメインを作成
-        $domain = $request->subdomain . '.localhost';
+        // サブドメインを作成（環境に応じてドメインを設定）
+        $domain = app()->environment('production') 
+            ? $request->subdomain . '.anken.cloud'
+            : $request->subdomain . '.localhost';
         $tenant->domains()->create([
             'domain' => $domain,
         ]);

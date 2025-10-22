@@ -98,7 +98,13 @@ class InflowSourceController extends Controller
             // LIFF URLを生成
             $calendar = Calendar::find($request->calendar_id);
             $tenantDomain = tenant('id'); // テナントIDを取得
-            $liffUrl = "https://{$tenantDomain}.localhost:8230/liff/calendar/{$calendar->id}?source={$sourceKey}";
+            
+            // 環境に応じてベースURLを決定
+            $baseUrl = app()->environment('production') 
+                ? 'https://anken.cloud' 
+                : 'https://localhost:8230';
+            
+            $liffUrl = "{$baseUrl}/liff/{$tenantDomain}?route=booking&slug={$sourceKey}";
             
             $source = InflowSource::create([
                 'name' => $request->name,
@@ -162,7 +168,13 @@ class InflowSourceController extends Controller
             if ($source->calendar_id != $request->calendar_id) {
                 $calendar = Calendar::find($request->calendar_id);
                 $tenantDomain = tenant('id');
-                $liffUrl = "https://{$tenantDomain}.localhost:8230/liff/calendar/{$calendar->id}?source={$source->source_key}";
+                
+                // 環境に応じてベースURLを決定
+                $baseUrl = app()->environment('production') 
+                    ? 'https://anken.cloud' 
+                    : 'https://localhost:8230';
+                
+                $liffUrl = "{$baseUrl}/liff/{$tenantDomain}?route=booking&slug={$source->source_key}";
                 $source->liff_url = $liffUrl;
             }
             

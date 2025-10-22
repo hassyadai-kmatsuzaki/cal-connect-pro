@@ -128,7 +128,9 @@ class GoogleCalendarCallbackController extends Controller
             ]);
 
             // 成功時はテナントドメインにリダイレクト
-            return redirect("http://{$tenantDomain}:8230{$returnUrl}?success=true");
+            $protocol = app()->environment('production') ? 'https' : 'http';
+            $port = app()->environment('production') ? '' : ':8230';
+            return redirect("{$protocol}://{$tenantDomain}{$port}{$returnUrl}?success=true");
 
         } catch (\Exception $e) {
             \Log::error('Google OAuth callback error: ' . $e->getMessage());
@@ -201,10 +203,14 @@ class GoogleCalendarCallbackController extends Controller
             $tenantDomain = $stateData['tenant_domain'] ?? 'localhost';
             $returnUrl = $stateData['return_url'] ?? '/google-calendar';
             
-            return redirect("http://{$tenantDomain}:8230{$returnUrl}?error=" . urlencode($error));
+            $protocol = app()->environment('production') ? 'https' : 'http';
+            $port = app()->environment('production') ? '' : ':8230';
+            return redirect("{$protocol}://{$tenantDomain}{$port}{$returnUrl}?error=" . urlencode($error));
         } catch (\Exception $e) {
             // ステートが無効な場合はデフォルトのテナントにリダイレクト
-            return redirect('http://localhost:8230/google-calendar?error=invalid_state');
+            $protocol = app()->environment('production') ? 'https' : 'http';
+            $port = app()->environment('production') ? '' : ':8230';
+            return redirect("{$protocol}://localhost{$port}/google-calendar?error=invalid_state");
         }
     }
 }

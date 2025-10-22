@@ -96,7 +96,7 @@
                 await trackInflowSource(slug, tenantId, utmParams);
 
                 // 予約ページにリダイレクト
-                let redirectUrl = `/booking/${slug}`;
+                let redirectUrl = `/booking/${tenantId}/${slug}`;
 
                 // UTMパラメータを追加（存在する場合のみ）
                 if (utmParams.toString()) {
