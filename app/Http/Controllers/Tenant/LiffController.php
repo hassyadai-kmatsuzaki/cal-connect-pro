@@ -239,9 +239,25 @@ class LiffController extends Controller
                     $eventId = $eventResponse['id'];
                     $meetUrl = null;
                     
-                    // Meet URLを取得
-                    if ($reservation->calendar->include_meet_url && isset($eventResponse['conferenceData']['entryPoints'][0]['uri'])) {
-                        $meetUrl = $eventResponse['conferenceData']['entryPoints'][0]['uri'];
+                    // Meet URLを取得（複数のパスをチェック）
+                    if ($reservation->calendar->include_meet_url) {
+                        $meetUrl = null;
+                        
+                        // conferenceData.entryPoints[0].uri をチェック
+                        if (isset($eventResponse['conferenceData']['entryPoints'][0]['uri'])) {
+                            $meetUrl = $eventResponse['conferenceData']['entryPoints'][0]['uri'];
+                        }
+                        // hangoutLink をチェック（古い形式）
+                        elseif (isset($eventResponse['hangoutLink'])) {
+                            $meetUrl = $eventResponse['hangoutLink'];
+                        }
+                        
+                        \Log::info('Meet URL extraction', [
+                            'reservation_id' => $reservation->id,
+                            'conference_data' => $eventResponse['conferenceData'] ?? null,
+                            'hangout_link' => $eventResponse['hangoutLink'] ?? null,
+                            'extracted_meet_url' => $meetUrl,
+                        ]);
                     }
                     
                     $reservation->update([
@@ -404,9 +420,12 @@ class LiffController extends Controller
                 }
             }
             
-            // Meet URLが見つからない場合は、新しいMeet URLを生成
-            $meetingId = 'meet-' . $reservation->id . '-' . substr(md5($reservation->reservation_datetime), 0, 8);
-            return "https://meet.google.com/{$meetingId}";
+            // Meet URLが見つからない場合は、nullを返す
+            \Log::warning('No Meet URL found in Google Calendar events', [
+                'reservation_id' => $reservation->id,
+                'calendar_id' => $reservation->calendar_id,
+            ]);
+            return null;
             
         } catch (\Exception $e) {
             \Log::error('Failed to generate Meet URL: ' . $e->getMessage(), [
@@ -415,9 +434,8 @@ class LiffController extends Controller
                 'error_trace' => $e->getTraceAsString(),
             ]);
             
-            // フォールバック: シンプルなMeet URLを生成
-            $meetingId = 'meet-' . $reservation->id . '-' . substr(md5($reservation->reservation_datetime), 0, 8);
-            return "https://meet.google.com/{$meetingId}";
+            // エラーの場合はnullを返す（無効なURLは生成しない）
+            return null;
         }
     }
     /**

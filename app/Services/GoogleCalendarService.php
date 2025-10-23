@@ -233,6 +233,9 @@ class GoogleCalendarService
                     'Authorization' => 'Bearer ' . $accessToken,
                     'Content-Type' => 'application/json',
                 ],
+                'query' => [
+                    'conferenceDataVersion' => 1,
+                ],
                 'json' => $event,
             ]);
             
@@ -380,6 +383,9 @@ class GoogleCalendarService
                     'Authorization' => 'Bearer ' . $accessToken,
                     'Content-Type' => 'application/json',
                 ],
+                'query' => [
+                    'conferenceDataVersion' => 1,
+                ],
                 'json' => $eventData,
             ]);
 
@@ -389,6 +395,8 @@ class GoogleCalendarService
                 'calendar_id' => $calendarId,
                 'event_id' => $responseData['id'] ?? null,
                 'meet_url' => $responseData['conferenceData']['entryPoints'][0]['uri'] ?? null,
+                'conference_data' => $responseData['conferenceData'] ?? null,
+                'hangout_link' => $responseData['hangoutLink'] ?? null,
                 'full_response' => $responseData,
             ]);
             
