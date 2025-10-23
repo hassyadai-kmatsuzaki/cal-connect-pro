@@ -33,7 +33,13 @@ Route::prefix('/api')->middleware([
 // 公開予約ページ（認証不要）
 Route::middleware(['web'])->group(function () {
     Route::get('/booking/{calendarId}', function ($calendarId) {
-        return view('booking.index', ['calendarId' => $calendarId]);
+        $tenantId = tenant('id');
+        $lineSetting = \App\Models\LineSetting::first();
+        return view('booking.index', [
+            'calendarId' => $calendarId,
+            'tenantId' => $tenantId,
+            'lineSetting' => $lineSetting
+        ]);
     })->name('booking.index');
 });
 

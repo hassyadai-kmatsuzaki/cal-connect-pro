@@ -606,7 +606,7 @@
         const calendarId = {{ $calendarId }};
         const apiBasePath = '/api/public';
         const liffId = '{{ $lineSetting->liff_id ?? "" }}';
-        const tenantId = '{{ $tenantId }}';
+        const tenantId = '{{ $tenantId ?? "" }}';
 
         // State management
         let calendarData = null;
@@ -623,13 +623,23 @@
             initializeLiff();
         });
 
-        // LIFF初期化
+        // LIFF初期化（オプション）
         async function initializeLiff() {
             try {
+                // LIFF IDが設定されている場合のみLIFFを初期化
+                if (!liffId) {
+                    console.log('LIFF ID not configured, skipping LIFF initialization');
+                    loadCalendarData();
+                    setupEventListeners();
+                    return;
+                }
+
                 await liff.init({ liffId: liffId });
                 
                 if (!liff.isLoggedIn()) {
-                    liff.login();
+                    console.log('Not logged in to LIFF, continuing without LINE authentication');
+                    loadCalendarData();
+                    setupEventListeners();
                     return;
                 }
                 
@@ -639,13 +649,20 @@
                 
             } catch (error) {
                 console.error('LIFF initialization failed:', error);
-                showError('LINEログインに失敗しました。');
+                console.log('Continuing without LIFF authentication');
+                loadCalendarData();
+                setupEventListeners();
             }
         }
 
-        // ユーザープロフィール取得
+        // ユーザープロフィール取得（LIFF認証がある場合のみ）
         async function loadUserProfile() {
             try {
+                if (!liffId || !tenantId || !liff.isLoggedIn()) {
+                    console.log('LIFF not available, skipping user profile loading');
+                    return;
+                }
+
                 const profile = await liff.getProfile();
                 
                 // LINEユーザー情報をサーバーに送信
@@ -666,13 +683,14 @@
                 if (response.ok) {
                     const data = await response.json();
                     lineUser = data.data;
+                    console.log('LINE user profile loaded:', lineUser);
                 } else {
-                    throw new Error('Failed to login');
+                    console.warn('Failed to load LINE user profile');
                 }
                 
             } catch (error) {
                 console.error('Failed to load user profile:', error);
-                showError('ユーザー情報の取得に失敗しました。');
+                console.log('Continuing without LINE user profile');
             }
         }
 
@@ -1107,7 +1125,10 @@
                     }
                 }
                 
-                const response = await fetch(`/api/liff/${tenantId}/reservations`, {
+                // LIFF認証がある場合はLIFF APIを使用、ない場合は公開APIを使用
+                const apiEndpoint = lineUser && tenantId ? `/api/liff/${tenantId}/reservations` : `/api/public/calendars/${calendarId}/reservations`;
+                
+                const response = await fetch(apiEndpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
