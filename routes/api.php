@@ -34,7 +34,7 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
         
         // 直接コントローラーメソッドを呼び出し
         $controller = new \App\Http\Controllers\Tenant\PublicReservationController();
-        return $controller->getCalendar(request(), $calendarId);
+        return $controller->getCalendar($calendarId, request());
     });
     Route::get('/liff/{tenant_id}/calendars/{calendarId}/available-slots', [\App\Http\Controllers\Tenant\PublicReservationController::class, 'getAvailableSlots']);
     

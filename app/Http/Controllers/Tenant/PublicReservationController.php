@@ -19,7 +19,7 @@ class PublicReservationController extends Controller
     /**
      * カレンダー情報を取得（公開用）
      */
-    public function getCalendar(Request $request, $id)
+    public function getCalendar($id, Request $request)
     {
         \Log::error('PublicReservationController::getCalendar called', [
             'calendar_id' => $id,
