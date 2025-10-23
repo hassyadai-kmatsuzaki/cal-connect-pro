@@ -51,9 +51,26 @@
             errorDiv.classList.remove('hidden');
         }
 
+        // LineSettingを取得する関数
+        async function getLineSetting(tenantId) {
+            try {
+                const response = await fetch(`/api/liff/${tenantId}/line-setting`);
+                if (response.ok) {
+                    const result = await response.json();
+                    return result.data;
+                }
+            } catch (error) {
+                console.error('Failed to get line setting:', error);
+            }
+            return null;
+        }
+
         // 流入経路を追跡する関数
         async function trackInflowSource(source, tenantId, utmParams) {
             try {
+                // LINEユーザー情報を取得
+                const profile = await liff.getProfile();
+                
                 const response = await fetch(`/api/liff/${tenantId}/track-inflow`, {
                     method: 'POST',
                     headers: {
@@ -62,6 +79,10 @@
                     },
                     body: JSON.stringify({
                         source: source,
+                        line_user_id: profile.userId,
+                        display_name: profile.displayName,
+                        picture_url: profile.pictureUrl,
+                        status_message: profile.statusMessage,
                         utm_params: Object.fromEntries(utmParams)
                     })
                 });
@@ -144,8 +165,10 @@
                         }
                         // 友だち追加の流入経路を追跡
                         await trackInflowSource(source, tenantId, utmParams);
-                        // 友だち追加URLにリダイレクト
-                        redirectUrl = 'https://line.me/R/ti/p/@your_line_id';
+                        // 友だち追加URLにリダイレクト（LineSettingから取得）
+                        const lineSetting = await getLineSetting(tenantId);
+                        const friendAddUrl = lineSetting?.line_id ? `https://line.me/R/ti/p/${lineSetting.line_id}` : 'https://line.me/R/ti/p/@your_line_id';
+                        redirectUrl = friendAddUrl;
                         break;
                     case 'booking':
                         // slugが指定されている場合は使用、なければデフォルトのカレンダーID（1）を使用

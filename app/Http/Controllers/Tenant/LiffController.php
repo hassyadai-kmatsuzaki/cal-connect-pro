@@ -94,6 +94,10 @@ class LiffController extends Controller
 
         $validator = Validator::make($request->all(), [
             'source' => 'required|string',
+            'line_user_id' => 'required|string',
+            'display_name' => 'nullable|string',
+            'picture_url' => 'nullable|string',
+            'status_message' => 'nullable|string',
             'utm_params' => 'nullable|array',
         ]);
 
@@ -109,26 +113,62 @@ class LiffController extends Controller
         }
 
         try {
-            // LINEユーザー情報を取得
-            $lineUser = LineUser::where('line_user_id', $request->line_user_id)->first();
+            // LINEユーザー情報を取得（LIFFから送信されたアクセストークンを使用）
+            $lineUserId = $request->line_user_id;
             
-            if ($lineUser) {
-                // 流入経路を特定
-                $inflowSource = \App\Models\InflowSource::where('source_key', $request->source)
-                    ->where('is_active', true)
-                    ->first();
+            if (!$lineUserId) {
+                return response()->json([
+                    'message' => 'LINEユーザーIDが取得できません',
+                ], 400);
+            }
+            
+            $lineUser = LineUser::where('line_user_id', $lineUserId)->first();
+            
+            if (!$lineUser) {
+                // LINEユーザーが存在しない場合は作成
+                $lineUser = LineUser::create([
+                    'line_user_id' => $lineUserId,
+                    'display_name' => $request->display_name,
+                    'picture_url' => $request->picture_url,
+                    'status_message' => $request->status_message,
+                    'is_active' => true,
+                    'followed_at' => now(),
+                ]);
                 
-                if ($inflowSource) {
-                    // 流入経路を更新
-                    $lineUser->update(['inflow_source_id' => $inflowSource->id]);
-                    $inflowSource->increment('views');
-                    
-                    \Log::info('Inflow tracked successfully', [
-                        'line_user_id' => $lineUser->line_user_id,
-                        'inflow_source_id' => $inflowSource->id,
-                        'tenant_id' => tenant('id'),
-                    ]);
-                }
+                \Log::info('LineUser created for tracking', [
+                    'line_user_id' => $lineUserId,
+                    'tenant_id' => tenant('id'),
+                ]);
+            } else {
+                // 既存のLINEユーザー情報を更新
+                $lineUser->update([
+                    'display_name' => $request->display_name,
+                    'picture_url' => $request->picture_url,
+                    'status_message' => $request->status_message,
+                    'is_active' => true,
+                ]);
+            }
+            
+            // 流入経路を特定
+            $inflowSource = \App\Models\InflowSource::where('source_key', $request->source)
+                ->where('is_active', true)
+                ->first();
+            
+            if ($inflowSource) {
+                // 流入経路を更新
+                $lineUser->update(['inflow_source_id' => $inflowSource->id]);
+                $inflowSource->increment('views');
+                
+                \Log::info('Inflow tracked successfully', [
+                    'line_user_id' => $lineUser->line_user_id,
+                    'inflow_source_id' => $inflowSource->id,
+                    'tenant_id' => tenant('id'),
+                ]);
+            } else {
+                \Log::warning('InflowSource not found', [
+                    'source_key' => $request->source,
+                    'tenant_id' => tenant('id'),
+                ]);
             }
 
             return response()->json([
@@ -149,7 +189,36 @@ class LiffController extends Controller
             ], 500);
         }
     }
-    public function getUser(Request $request)
+    /**
+     * LineSettingを取得
+     */
+    public function getLineSetting(Request $request)
+    {
+        try {
+            $lineSetting = \App\Models\LineSetting::first();
+            
+            if (!$lineSetting) {
+                return response()->json([
+                    'message' => 'LINE設定が見つかりません',
+                ], 404);
+            }
+            
+            return response()->json([
+                'data' => [
+                    'line_id' => $lineSetting->line_id,
+                    'liff_id' => $lineSetting->liff_id,
+                ],
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to get line setting: ' . $e->getMessage());
+            
+            return response()->json([
+                'message' => 'LINE設定の取得に失敗しました',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
     {
         $lineUserId = $request->query('line_user_id');
         

@@ -42,6 +42,9 @@ class LiffController extends Controller
                     if ($request->is('*/user')) {
                         Log::info('Calling tenant getUser method');
                         return $tenantLiffController->getUser($request);
+                    } elseif ($request->is('*/line-setting')) {
+                        Log::info('Calling tenant getLineSetting method');
+                        return $tenantLiffController->getLineSetting($request);
                     }
                     break;
                 case 'POST':

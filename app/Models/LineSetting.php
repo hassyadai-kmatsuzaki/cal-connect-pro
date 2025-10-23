@@ -14,6 +14,7 @@ class LineSetting extends Model
         'channel_secret',
         'channel_access_token',
         'liff_id',
+        'line_id',
         'webhook_url',
         'is_connected',
         'connected_at',
