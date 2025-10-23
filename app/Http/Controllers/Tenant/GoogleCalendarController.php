@@ -29,8 +29,10 @@ class GoogleCalendarController extends Controller
             ], 500);
         }
 
-        // 中央ドメインのコールバックURLを使用
-        $redirectUri = 'http://localhost:8230/api/google-calendar/callback';
+        // 環境に応じて中央ドメインのコールバックURLを設定
+        $redirectUri = app()->environment('production') 
+            ? 'https://anken.cloud/api/google-calendar/callback'
+            : 'http://localhost:8230/api/google-calendar/callback';
         
         // 現在のテナントドメインを取得（リクエストのホスト名から）
         $tenantDomain = request()->getHost();
@@ -106,7 +108,11 @@ class GoogleCalendarController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Failed to get Google Calendar status: ' . $e->getMessage());
+            \Log::error('Failed to get Google Calendar status: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'error_code' => $e->getCode(),
+                'environment' => app()->environment(),
+            ]);
             
             // トークンが無効な場合は連携を解除
             $user->update([
@@ -118,6 +124,7 @@ class GoogleCalendarController extends Controller
             return response()->json([
                 'connected' => false,
                 'error' => 'トークンが無効です。再度連携してください。',
+                'debug_info' => app()->environment('local') ? $e->getMessage() : null,
             ]);
         }
     }
@@ -139,9 +146,18 @@ class GoogleCalendarController extends Controller
                         'token' => $refreshToken,
                     ],
                 ]);
+                
+                \Log::info('Google token revoked successfully', [
+                    'user_id' => $user->id,
+                    'environment' => app()->environment(),
+                ]);
             }
         } catch (\Exception $e) {
-            \Log::warning('Failed to revoke Google token: ' . $e->getMessage());
+            \Log::warning('Failed to revoke Google token: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'error_code' => $e->getCode(),
+                'environment' => app()->environment(),
+            ]);
         }
 
         // ユーザー情報を更新
@@ -187,11 +203,15 @@ class GoogleCalendarController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Failed to sync Google Calendar: ' . $e->getMessage());
+            \Log::error('Failed to sync Google Calendar: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'error_code' => $e->getCode(),
+                'environment' => app()->environment(),
+            ]);
             
             return response()->json([
                 'message' => 'カレンダーの同期に失敗しました',
-                'error' => $e->getMessage(),
+                'error' => app()->environment('local') ? $e->getMessage() : 'サーバーエラーが発生しました',
             ], 500);
         }
     }
@@ -201,20 +221,35 @@ class GoogleCalendarController extends Controller
      */
     private function getAccessToken($user)
     {
-        $refreshToken = decrypt($user->google_refresh_token);
+        try {
+            $refreshToken = decrypt($user->google_refresh_token);
 
-        $response = $this->client->post('https://oauth2.googleapis.com/token', [
-            'form_params' => [
-                'client_id' => config('services.google.client_id'),
-                'client_secret' => config('services.google.client_secret'),
-                'refresh_token' => $refreshToken,
-                'grant_type' => 'refresh_token',
-            ],
-        ]);
+            $response = $this->client->post('https://oauth2.googleapis.com/token', [
+                'form_params' => [
+                    'client_id' => config('services.google.client_id'),
+                    'client_secret' => config('services.google.client_secret'),
+                    'refresh_token' => $refreshToken,
+                    'grant_type' => 'refresh_token',
+                ],
+            ]);
 
-        $data = json_decode($response->getBody(), true);
-        
-        return $data['access_token'];
+            $data = json_decode($response->getBody(), true);
+            
+            if (!isset($data['access_token'])) {
+                throw new \Exception('Access token not found in response');
+            }
+            
+            return $data['access_token'];
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to get access token: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'error_code' => $e->getCode(),
+                'environment' => app()->environment(),
+            ]);
+            
+            throw $e;
+        }
     }
 
     /**
@@ -256,11 +291,18 @@ class GoogleCalendarController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Failed to get availability: ' . $e->getMessage());
+            \Log::error('Failed to get availability: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'calendar_id' => $user->google_calendar_id,
+                'time_min' => $timeMin,
+                'time_max' => $timeMax,
+                'error_code' => $e->getCode(),
+                'environment' => app()->environment(),
+            ]);
             
             return response()->json([
                 'message' => '空き時間の取得に失敗しました',
-                'error' => $e->getMessage(),
+                'error' => app()->environment('local') ? $e->getMessage() : 'サーバーエラーが発生しました',
             ], 500);
         }
     }
