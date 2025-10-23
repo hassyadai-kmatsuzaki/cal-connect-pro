@@ -64,7 +64,7 @@ class PublicReservationController extends Controller
     /**
      * 利用可能な時間枠を取得
      */
-    public function getAvailableSlots(Request $request, $calendarId)
+    public function getAvailableSlots($calendarId, Request $request)
     {
         \Log::info('getAvailableSlots called', [
             'calendar_id' => $calendarId,
