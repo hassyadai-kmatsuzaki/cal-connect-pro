@@ -112,6 +112,9 @@ class LiffController extends Controller
             'customer_phone' => 'nullable|string|max:50',
             'line_user_id' => 'required|string',
             'inflow_source_id' => 'nullable|exists:inflow_sources,id',
+            'answers' => 'nullable|array',
+            'answers.*.hearing_form_item_id' => 'required_with:answers|exists:hearing_form_items,id',
+            'answers.*.answer_text' => 'required_with:answers|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -146,6 +149,25 @@ class LiffController extends Controller
                 'inflow_source_id' => $request->inflow_source_id,
                 'status' => 'pending', // LIFFからの予約は保留状態
             ]);
+
+            // ヒアリング回答を保存（ヒアリングフォームが紐づいている場合のみ）
+            if ($request->has('answers') && is_array($request->answers)) {
+                foreach ($request->answers as $answer) {
+                    \App\Models\ReservationAnswer::create([
+                        'reservation_id' => $reservation->id,
+                        'hearing_form_item_id' => $answer['hearing_form_item_id'],
+                        'answer_text' => $answer['answer_text'],
+                    ]);
+                }
+                \Log::info('Hearing form answers saved for LIFF reservation', [
+                    'reservation_id' => $reservation->id,
+                    'answers_count' => count($request->answers),
+                ]);
+            } else {
+                \Log::info('No hearing form answers provided for LIFF reservation', [
+                    'reservation_id' => $reservation->id,
+                ]);
+            }
 
             // Googleカレンダーイベントを作成
             $this->createGoogleCalendarEvent($reservation);
@@ -206,9 +228,21 @@ class LiffController extends Controller
                     continue;
                 }
 
+                // イベントの説明文を構築
+                $description = $this->buildEventDescription($reservation);
+                
+                // ヒアリング回答を追加（ヒアリングフォームが紐づいている場合のみ）
+                $answers = \App\Models\ReservationAnswer::where('reservation_id', $reservation->id)->get();
+                if ($answers->isNotEmpty()) {
+                    $description .= "\n--- ヒアリング回答 ---\n";
+                    foreach ($answers as $answer) {
+                        $description .= "{$answer->hearingFormItem->label}: {$answer->answer_text}\n";
+                    }
+                }
+
                 $eventData = [
                     'summary' => "予約: {$reservation->customer_name}",
-                    'description' => $this->buildEventDescription($reservation),
+                    'description' => $description,
                     'start' => [
                         'dateTime' => Carbon::parse($reservation->reservation_datetime)->toRfc3339String(),
                         'timeZone' => 'Asia/Tokyo',
