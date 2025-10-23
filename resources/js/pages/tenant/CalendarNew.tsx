@@ -113,14 +113,14 @@ const CalendarNew: React.FC = () => {
     inviteCalendars: [],
     slackNotify: false,
     slackWebhook: '',
-    slackMessage: '新しい予約が入りました。\n予約者: {name}\n日時: {datetime}',
+    slackMessage: '新しい予約が入りました。\n予約者: {{customer_name}}\n日時: {{reservation_datetime}}',
     lineAutoReply: false,
     includeMeetUrl: true,
-    lineReplyMessage: 'ご予約ありがとうございます。\n日時: {datetime}\n担当者: {staff}',
+    lineReplyMessage: 'ご予約ありがとうございます。\n日時: {{reservation_datetime}}\n担当者: {{calendar_name}}',
     lineRemind: false,
     remindDaysBefore: 0,
     remindHoursBefore: 24,
-    lineRemindMessage: '明日の予約のリマインドです。\n日時: {datetime}\n担当者: {staff}',
+    lineRemindMessage: '明日の予約のリマインドです。\n日時: {{reservation_datetime}}\n担当者: {{calendar_name}}',
     hearingFormId: null,
   });
 
@@ -609,7 +609,7 @@ const CalendarNew: React.FC = () => {
                         rows={3}
                         value={formData.slackMessage}
                         onChange={(e) => setFormData({ ...formData, slackMessage: e.target.value })}
-                        helperText="変数: {name}, {datetime}, {email}, {phone}"
+                        helperText="変数: {{customer_name}}, {{reservation_datetime}}, {{customer_email}}, {{customer_phone}}"
                       />
                     </Box>
                   )}
@@ -656,7 +656,7 @@ const CalendarNew: React.FC = () => {
                         rows={4}
                         value={formData.lineReplyMessage}
                         onChange={(e) => setFormData({ ...formData, lineReplyMessage: e.target.value })}
-                        helperText="変数: {name}, {datetime}, {staff}, {meet_url}"
+                        helperText="変数: {{customer_name}}, {{reservation_datetime}}, {{calendar_name}}, {{meet_url}}, {{duration_minutes}}, {{customer_email}}, {{customer_phone}}"
                       />
                     </Box>
                   )}
@@ -719,7 +719,7 @@ const CalendarNew: React.FC = () => {
                         rows={3}
                         value={formData.lineRemindMessage}
                         onChange={(e) => setFormData({ ...formData, lineRemindMessage: e.target.value })}
-                        helperText="変数: {name}, {datetime}, {staff}"
+                        helperText="変数: {{customer_name}}, {{reservation_datetime}}, {{calendar_name}}"
                       />
                     </Box>
                   )}

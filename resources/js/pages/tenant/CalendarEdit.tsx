@@ -641,7 +641,7 @@ const CalendarEdit: React.FC = () => {
                         rows={3}
                         value={formData.slackMessage}
                         onChange={(e) => setFormData({ ...formData, slackMessage: e.target.value })}
-                        helperText="変数: {name}, {datetime}, {email}, {phone}"
+                        helperText="変数: {{customer_name}}, {{reservation_datetime}}, {{customer_email}}, {{customer_phone}}"
                       />
                     </Box>
                   )}
@@ -688,7 +688,7 @@ const CalendarEdit: React.FC = () => {
                         rows={4}
                         value={formData.lineReplyMessage}
                         onChange={(e) => setFormData({ ...formData, lineReplyMessage: e.target.value })}
-                        helperText="変数: {name}, {datetime}, {staff}, {meet_url}"
+                        helperText="変数: {{customer_name}}, {{reservation_datetime}}, {{calendar_name}}, {{meet_url}}, {{duration_minutes}}, {{customer_email}}, {{customer_phone}}"
                       />
                     </Box>
                   )}
@@ -751,7 +751,7 @@ const CalendarEdit: React.FC = () => {
                         rows={3}
                         value={formData.lineRemindMessage}
                         onChange={(e) => setFormData({ ...formData, lineRemindMessage: e.target.value })}
-                        helperText="変数: {name}, {datetime}, {staff}"
+                        helperText="変数: {{customer_name}}, {{reservation_datetime}}, {{calendar_name}}"
                       />
                     </Box>
                   )}

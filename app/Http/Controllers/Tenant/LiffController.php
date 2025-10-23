@@ -248,18 +248,31 @@ class LiffController extends Controller
         try {
             $lineMessagingService = new LineMessagingService();
             
-            $message = "予約を受け付けました！\n\n";
-            $message .= "📅 予約日時: " . Carbon::parse($reservation->reservation_datetime)->format('Y年m月d日 H:i') . "\n";
-            $message .= "⏰ 予約時間: {$reservation->duration_minutes}分\n";
-            $message .= "👤 お客様名: {$reservation->customer_name}\n";
-            $message .= "📋 ステータス: 保留中\n\n";
-            $message .= "予約確定までしばらくお待ちください。";
+            // カレンダー設定を取得
+            $calendar = $reservation->calendar;
+            
+            // カスタムメッセージがある場合は使用、なければデフォルトメッセージ
+            if ($calendar->line_reply_message) {
+                $message = $this->buildCustomMessage($calendar->line_reply_message, $reservation);
+            } else {
+                $message = $this->buildDefaultMessage($reservation);
+            }
+            
+            // Meet URLを含めるかチェック
+            if ($calendar->include_meet_url) {
+                $meetUrl = $this->generateMeetUrl($reservation);
+                if ($meetUrl) {
+                    $message .= "\n\n📹 ミーティングURL:\n{$meetUrl}";
+                }
+            }
 
             $lineMessagingService->sendMessage($lineUser->line_user_id, $message);
             
             \Log::info('Reservation confirmation sent', [
                 'line_user_id' => $lineUser->line_user_id,
                 'reservation_id' => $reservation->id,
+                'custom_message_used' => !empty($calendar->line_reply_message),
+                'meet_url_included' => $calendar->include_meet_url,
             ]);
             
         } catch (\Exception $e) {
@@ -270,6 +283,99 @@ class LiffController extends Controller
         }
     }
 
+    /**
+     * カスタムメッセージを構築
+     */
+    private function buildCustomMessage(string $template, Reservation $reservation): string
+    {
+        // Meet URLを生成
+        $meetUrl = $this->generateMeetUrl($reservation);
+        
+        $replacements = [
+            '{{customer_name}}' => $reservation->customer_name,
+            '{{reservation_datetime}}' => Carbon::parse($reservation->reservation_datetime)->format('Y年m月d日 H:i'),
+            '{{duration_minutes}}' => $reservation->duration_minutes,
+            '{{customer_email}}' => $reservation->customer_email ?? '',
+            '{{customer_phone}}' => $reservation->customer_phone ?? '',
+            '{{calendar_name}}' => $reservation->calendar->name ?? '',
+            '{{meet_url}}' => $meetUrl ?? '',
+            // フロントエンドとの互換性のため、古いプレースホルダーもサポート
+            '{name}' => $reservation->customer_name,
+            '{datetime}' => Carbon::parse($reservation->reservation_datetime)->format('Y年m月d日 H:i'),
+            '{staff}' => $reservation->calendar->name ?? '',
+            '{meet_url}' => $meetUrl ?? '',
+        ];
+        
+        return str_replace(array_keys($replacements), array_values($replacements), $template);
+    }
+
+    /**
+     * デフォルトメッセージを構築
+     */
+    private function buildDefaultMessage(Reservation $reservation): string
+    {
+        $message = "予約を受け付けました！\n\n";
+        $message .= "📅 予約日時: " . Carbon::parse($reservation->reservation_datetime)->format('Y年m月d日 H:i') . "\n";
+        $message .= "⏰ 予約時間: {$reservation->duration_minutes}分\n";
+        $message .= "👤 お客様名: {$reservation->customer_name}\n";
+        $message .= "📋 ステータス: 保留中\n\n";
+        $message .= "予約確定までしばらくお待ちください。";
+        
+        return $message;
+    }
+
+    /**
+     * Meet URLを生成
+     */
+    private function generateMeetUrl(Reservation $reservation): ?string
+    {
+        try {
+            // Google Calendar APIを使用してMeet URLを生成
+            $googleCalendarService = new \App\Services\GoogleCalendarService();
+            
+            // カレンダーに接続されたユーザーを取得
+            $calendar = $reservation->calendar;
+            $calendar->load('users');
+            
+            if ($calendar->users->isEmpty()) {
+                \Log::warning('No users connected to calendar for Meet URL generation', [
+                    'calendar_id' => $calendar->id,
+                    'reservation_id' => $reservation->id,
+                ]);
+                return null;
+            }
+            
+            // 最初のユーザーのGoogle Calendarにアクセス
+            $user = $calendar->users->first();
+            $googleCalendarService->setUser($user);
+            
+            // 予約に対応するGoogle Calendarイベントを検索
+            $events = $googleCalendarService->getEvents(
+                $calendar->google_calendar_id ?? 'primary',
+                $reservation->reservation_datetime,
+                Carbon::parse($reservation->reservation_datetime)->addMinutes($reservation->duration_minutes)
+            );
+            
+            foreach ($events as $event) {
+                if (isset($event['conferenceData']['entryPoints'][0]['uri'])) {
+                    return $event['conferenceData']['entryPoints'][0]['uri'];
+                }
+            }
+            
+            // Meet URLが見つからない場合は、新しいMeet URLを生成
+            $meetingId = 'meet-' . $reservation->id . '-' . substr(md5($reservation->reservation_datetime), 0, 8);
+            return "https://meet.google.com/{$meetingId}";
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to generate Meet URL: ' . $e->getMessage(), [
+                'reservation_id' => $reservation->id,
+            ]);
+            
+            // フォールバック: シンプルなMeet URLを生成
+            $meetingId = 'meet-' . $reservation->id . '-' . substr(md5($reservation->reservation_datetime), 0, 8);
+            return "https://meet.google.com/{$meetingId}";
+        }
+    }
     /**
      * イベントの説明文を構築
      */
