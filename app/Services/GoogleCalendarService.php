@@ -9,10 +9,52 @@ use Carbon\Carbon;
 class GoogleCalendarService
 {
     private $client;
+    private $user;
 
     public function __construct()
     {
         $this->client = new Client();
+    }
+
+    /**
+     * ユーザーを設定
+     */
+    public function setUser($user)
+    {
+        $this->user = $user;
+    }
+
+    /**
+     * イベントを取得
+     */
+    public function getEvents(string $calendarId, string $startDateTime, string $endDateTime)
+    {
+        try {
+            if (!$this->user) {
+                throw new \Exception('User not set');
+            }
+
+            $accessToken = $this->getAccessToken($this->user->google_refresh_token);
+            
+            $response = $this->client->get("https://www.googleapis.com/calendar/v3/calendars/{$calendarId}/events", [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $accessToken,
+                ],
+                'query' => [
+                    'timeMin' => $startDateTime,
+                    'timeMax' => $endDateTime,
+                    'singleEvents' => 'true',
+                    'orderBy' => 'startTime',
+                ],
+            ]);
+
+            $data = json_decode($response->getBody(), true);
+            return $data['items'] ?? [];
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to get Google Calendar events: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**

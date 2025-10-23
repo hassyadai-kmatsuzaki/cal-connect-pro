@@ -350,10 +350,13 @@ class LiffController extends Controller
             $googleCalendarService->setUser($user);
             
             // 予約に対応するGoogle Calendarイベントを検索
+            $startDateTime = Carbon::parse($reservation->reservation_datetime)->toRfc3339String();
+            $endDateTime = Carbon::parse($reservation->reservation_datetime)->addMinutes($reservation->duration_minutes)->toRfc3339String();
+            
             $events = $googleCalendarService->getEvents(
                 $calendar->google_calendar_id ?? 'primary',
-                $reservation->reservation_datetime,
-                Carbon::parse($reservation->reservation_datetime)->addMinutes($reservation->duration_minutes)
+                $startDateTime,
+                $endDateTime
             );
             
             foreach ($events as $event) {
@@ -369,6 +372,8 @@ class LiffController extends Controller
         } catch (\Exception $e) {
             \Log::error('Failed to generate Meet URL: ' . $e->getMessage(), [
                 'reservation_id' => $reservation->id,
+                'calendar_id' => $reservation->calendar_id,
+                'error_trace' => $e->getTraceAsString(),
             ]);
             
             // フォールバック: シンプルなMeet URLを生成
