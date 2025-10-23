@@ -34,6 +34,19 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
         return response()->json(['message' => 'Test successful', 'tenant_id' => $tenantId, 'current_tenant' => tenant('id')]);
     });
     
+    // デバッグ用ルート（ミドルウェアなし）
+    Route::get('/debug/{tenant_id}', function ($tenantId) {
+        \Log::info('Debug route called', ['tenant_id' => $tenantId]);
+        $tenant = \App\Models\Tenant::find($tenantId);
+        return response()->json([
+            'message' => 'Debug route',
+            'tenant_id' => $tenantId,
+            'tenant_found' => $tenant ? true : false,
+            'tenant_name' => $tenant ? $tenant->company_name : null,
+            'all_tenants' => \App\Models\Tenant::all()->pluck('id')->toArray(),
+        ]);
+    });
+    
     // 流入経路追跡API
     Route::post('/inflow-sources/track', [\App\Http\Controllers\Tenant\InflowSourceController::class, 'track']);
 });

@@ -62,3 +62,13 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     })->name('book');
 });
 
+// SPAのフォールバックルート（APIルートは除外）
+Route::fallback(function (Request $request) {
+    // APIルートの場合は404を返す
+    if (str_starts_with($request->path(), 'api/')) {
+        abort(404);
+    }
+    
+    return view('app');
+});
+

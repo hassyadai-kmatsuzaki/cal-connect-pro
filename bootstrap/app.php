@@ -10,24 +10,19 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // API routes (processed first to ensure they take precedence over fallback)
-            Route::prefix('api')
-                ->middleware('api')
-                ->group(base_path('routes/api.php'));
-            
             // Tenant routes with tenancy middleware
             Route::middleware([
                 Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
                 Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
             ])->group(base_path('routes/tenant.php'));
             
-            // Web routes (processed before fallback)
+            // Web routes (processed before API)
             Route::middleware(['web'])->group(base_path('routes/web.php'));
             
-            // Fallback route (processed last)
-            Route::fallback(function () {
-                return view('app');
-            });
+            // API routes (processed after web to ensure they take precedence over fallback)
+            Route::prefix('api')
+                ->middleware('api')
+                ->group(base_path('routes/api.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

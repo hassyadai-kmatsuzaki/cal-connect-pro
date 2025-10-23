@@ -13,7 +13,7 @@ class InitializeTenancyByParam
     {
         $tenantId = $request->route('tenant_id');
         
-        Log::info('InitializeTenancyByParam middleware called', [
+        \Log::error('InitializeTenancyByParam middleware called', [
             'tenant_id' => $tenantId,
             'url' => $request->url(),
             'method' => $request->method(),
@@ -26,7 +26,11 @@ class InitializeTenancyByParam
 
         $tenant = Tenant::find($tenantId);
         if (!$tenant) {
-            Log::error('Tenant not found: ' . $tenantId);
+            Log::error('Tenant not found: ' . $tenantId, [
+                'available_tenants' => Tenant::all()->pluck('id')->toArray(),
+                'request_url' => $request->url(),
+                'request_method' => $request->method(),
+            ]);
             return response()->json(['message' => 'Tenant not found'], 404);
         }
 
