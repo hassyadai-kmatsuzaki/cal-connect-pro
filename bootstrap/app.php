@@ -21,8 +21,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
             ])->group(base_path('routes/tenant.php'));
             
-            // Web routes (fallback, processed last)
+            // Web routes (processed before fallback)
             Route::middleware(['web'])->group(base_path('routes/web.php'));
+            
+            // Fallback route (processed last)
+            Route::fallback(function () {
+                return view('app');
+            });
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {

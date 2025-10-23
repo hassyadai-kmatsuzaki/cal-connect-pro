@@ -62,9 +62,3 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     })->name('book');
 });
 
-// SPAのフォールバックルート（セントラル&テナント共通）
-// JavaScriptで適切なページを表示
-// APIルートは api.php で処理されるため、ここでは除外
-Route::get('/{any}', function () {
-    return view('app');
-})->where('any', '.*');
