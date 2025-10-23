@@ -27,10 +27,6 @@ import {
   Stack,
   CircularProgress,
   Snackbar,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   LinearProgress,
 } from '@mui/material';
 import {
@@ -54,11 +50,6 @@ interface InflowSource {
   name: string;
   source_key: string;
   liff_url: string;
-  calendar_id: number;
-  calendar: {
-    id: number;
-    name: string;
-  };
   views: number;
   conversions: number;
   conversion_rate: number;
@@ -66,11 +57,6 @@ interface InflowSource {
   welcome_message?: string;
   enable_welcome_message?: boolean;
   created_at: string;
-}
-
-interface Calendar {
-  id: number;
-  name: string;
 }
 
 interface StatsData {
@@ -88,7 +74,6 @@ const InflowAnalysis: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sources, setSources] = useState<InflowSource[]>([]);
-  const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [stats, setStats] = useState<StatsData | null>(null);
   
   // ダイアログ状態
@@ -100,7 +85,6 @@ const InflowAnalysis: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     source_key: '',
-    calendar_id: '',
     welcome_message: '',
     enable_welcome_message: false,
   });
@@ -120,7 +104,6 @@ const InflowAnalysis: React.FC = () => {
       setLoading(true);
       await Promise.all([
         fetchSources(),
-        fetchCalendars(),
         fetchStats(),
       ]);
     } catch (error) {
@@ -141,15 +124,6 @@ const InflowAnalysis: React.FC = () => {
         message: '友だち追加流入経路の取得に失敗しました',
         severity: 'error',
       });
-    }
-  };
-
-  const fetchCalendars = async () => {
-    try {
-      const response = await axios.get('/api/calendars');
-      setCalendars(response.data.data);
-    } catch (error: any) {
-      console.error('Failed to fetch calendars:', error);
     }
   };
 
@@ -177,7 +151,6 @@ const InflowAnalysis: React.FC = () => {
       setFormData({
         name: source.name,
         source_key: source.source_key,
-        calendar_id: source.calendar_id.toString(),
         welcome_message: source.welcome_message || '',
         enable_welcome_message: source.enable_welcome_message || false,
       });
@@ -186,7 +159,6 @@ const InflowAnalysis: React.FC = () => {
       setFormData({
         name: '',
         source_key: '',
-        calendar_id: '',
         welcome_message: '',
         enable_welcome_message: false,
       });
@@ -200,7 +172,6 @@ const InflowAnalysis: React.FC = () => {
     setFormData({
       name: '',
       source_key: '',
-      calendar_id: '',
       welcome_message: '',
       enable_welcome_message: false,
     });
@@ -216,22 +187,13 @@ const InflowAnalysis: React.FC = () => {
       return;
     }
 
-    if (!formData.calendar_id) {
-      setSnackbar({
-        open: true,
-        message: 'カレンダーを選択してください',
-        severity: 'error',
-      });
-      return;
-    }
-
     setSaving(true);
     try {
       if (selectedSource) {
         // 更新
         const response = await axios.put(`/api/inflow-sources/${selectedSource.id}`, {
           name: formData.name,
-          calendar_id: formData.calendar_id,
+          source_key: formData.source_key,
           welcome_message: formData.welcome_message,
           enable_welcome_message: formData.enable_welcome_message,
         });
@@ -245,7 +207,6 @@ const InflowAnalysis: React.FC = () => {
         const response = await axios.post('/api/inflow-sources', {
           name: formData.name,
           source_key: formData.source_key || undefined,
-          calendar_id: formData.calendar_id,
           welcome_message: formData.welcome_message,
           enable_welcome_message: formData.enable_welcome_message,
         });
@@ -445,8 +406,7 @@ const InflowAnalysis: React.FC = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>流入経路名</TableCell>
-                      <TableCell>カレンダー</TableCell>
+                      <TableCell>友だち追加流入経路名</TableCell>
                       <TableCell align="center">友だち追加数</TableCell>
                       <TableCell align="center">予約数</TableCell>
                       <TableCell align="center">CVR</TableCell>
@@ -464,9 +424,6 @@ const InflowAnalysis: React.FC = () => {
                           <Typography variant="caption" color="text.secondary">
                             識別キー: {source.source_key}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip label={source.calendar.name} size="small" />
                         </TableCell>
                         <TableCell align="center">
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
@@ -546,21 +503,6 @@ const InflowAnalysis: React.FC = () => {
                 placeholder="例: Instagram投稿、Twitter広告"
                 helperText="どこからの流入か分かりやすい名前を付けてください"
               />
-
-              <FormControl fullWidth required>
-                <InputLabel>カレンダー</InputLabel>
-                <Select
-                  value={formData.calendar_id}
-                  label="カレンダー"
-                  onChange={(e) => setFormData({ ...formData, calendar_id: e.target.value })}
-                >
-                  {calendars.map((calendar) => (
-                    <MenuItem key={calendar.id} value={calendar.id}>
-                      {calendar.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
 
               {!selectedSource && (
                 <TextField

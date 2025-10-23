@@ -17,12 +17,7 @@ class InflowSourceController extends Controller
      */
     public function index(Request $request)
     {
-        $query = InflowSource::with('calendar:id,name');
-        
-        // カレンダーIDでフィルター
-        if ($request->has('calendar_id')) {
-            $query->where('calendar_id', $request->calendar_id);
-        }
+        $query = InflowSource::query();
         
         // アクティブ状態でフィルター
         if ($request->has('is_active')) {
@@ -55,7 +50,7 @@ class InflowSourceController extends Controller
      */
     public function show($id)
     {
-        $source = InflowSource::with('calendar')->find($id);
+        $source = InflowSource::find($id);
         
         if (!$source) {
             return response()->json([
@@ -75,14 +70,11 @@ class InflowSourceController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'calendar_id' => 'required|exists:calendars,id',
             'source_key' => 'nullable|string|max:255|unique:inflow_sources,source_key',
             'welcome_message' => 'nullable|string|max:1000',
             'enable_welcome_message' => 'boolean',
         ], [
             'name.required' => '流入経路名は必須です',
-            'calendar_id.required' => 'カレンダーを選択してください',
-            'calendar_id.exists' => '指定されたカレンダーが存在しません',
             'source_key.unique' => 'この識別キーは既に使用されています',
         ]);
 
@@ -97,28 +89,24 @@ class InflowSourceController extends Controller
             // source_keyが指定されていない場合は自動生成
             $sourceKey = $request->source_key ?? Str::random(8);
             
-            // LIFF URLを生成
-            $calendar = Calendar::find($request->calendar_id);
+            // LIFF URLを生成（友だち追加用）
             $tenantDomain = tenant('id'); // テナントIDを取得
             
             // 環境に応じてベースURLを決定
             $baseUrl = app()->environment('production') 
                 ? 'https://anken.cloud' 
-                : 'https://localhost:8230';
+                : 'http://localhost:8230';
             
-            $liffUrl = "{$baseUrl}/liff/{$tenantDomain}?route=booking&slug={$sourceKey}";
+            $liffUrl = "{$baseUrl}/inflow/{$tenantDomain}?source={$sourceKey}";
             
             $source = InflowSource::create([
                 'name' => $request->name,
                 'source_key' => $sourceKey,
-                'calendar_id' => $request->calendar_id,
                 'liff_url' => $liffUrl,
                 'welcome_message' => $request->welcome_message,
                 'enable_welcome_message' => $request->enable_welcome_message ?? false,
                 'is_active' => true,
             ]);
-
-            $source->load('calendar');
             
             // conversion_rateを明示的に追加
             $source->conversion_rate = $source->conversion_rate;
@@ -153,13 +141,12 @@ class InflowSourceController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'calendar_id' => 'required|exists:calendars,id',
+            'source_key' => 'nullable|string|max:255|unique:inflow_sources,source_key,' . $id,
             'welcome_message' => 'nullable|string|max:1000',
             'enable_welcome_message' => 'boolean',
         ], [
             'name.required' => '流入経路名は必須です',
-            'calendar_id.required' => 'カレンダーを選択してください',
-            'calendar_id.exists' => '指定されたカレンダーが存在しません',
+            'source_key.unique' => 'この識別キーは既に使用されています',
         ]);
 
         if ($validator->fails()) {
@@ -170,28 +157,12 @@ class InflowSourceController extends Controller
         }
 
         try {
-            // カレンダーが変更された場合、LIFF URLを再生成
-            if ($source->calendar_id != $request->calendar_id) {
-                $calendar = Calendar::find($request->calendar_id);
-                $tenantDomain = tenant('id');
-                
-                // 環境に応じてベースURLを決定
-                $baseUrl = app()->environment('production') 
-                    ? 'https://anken.cloud' 
-                    : 'https://localhost:8230';
-                
-                $liffUrl = "{$baseUrl}/liff/{$tenantDomain}?route=booking&slug={$source->source_key}";
-                $source->liff_url = $liffUrl;
-            }
-            
             $source->update([
                 'name' => $request->name,
-                'calendar_id' => $request->calendar_id,
+                'source_key' => $request->source_key ?? $source->source_key,
                 'welcome_message' => $request->welcome_message,
                 'enable_welcome_message' => $request->enable_welcome_message ?? false,
             ]);
-
-            $source->load('calendar');
             
             // conversion_rateを明示的に追加
             $source->conversion_rate = $source->conversion_rate;
