@@ -56,13 +56,13 @@
             try {
                 await liff.init({ liffId: "{{ $liffId }}" });
 
-                const slug = getQueryParam('slug');
+                const source = getQueryParam('source');
                 const tenantId = "{{ $tenantId }}";
                 
                 if (!liff.isLoggedIn()) {
                     // クエリパラメータを正しく構築
                     const params = new URLSearchParams();
-                    if (slug) params.append('slug', slug);
+                    if (source) params.append('source', source);
                     
                     const redirectUri = `${window.location.origin}${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
                     
@@ -77,8 +77,8 @@
                     throw new Error('アクセストークンが取得できません');
                 }
 
-                if (!slug) {
-                    showError('slugパラメータが指定されていません');
+                if (!source) {
+                    showError('sourceパラメータが指定されていません');
                     return;
                 }
 
@@ -93,10 +93,11 @@
                 });
 
                 // 流入経路を追跡
-                await trackInflowSource(slug, tenantId, utmParams);
+                await trackInflowSource(source, tenantId, utmParams);
 
-                // 予約ページにリダイレクト
-                let redirectUrl = `/booking/${tenantId}/${slug}`;
+                // 友だち追加URLにリダイレクト（または予約ページ）
+                // 現在は予約ページにリダイレクトしていますが、友だち追加URLに変更可能
+                let redirectUrl = `/booking/${tenantId}/1?source=${source}`;
 
                 // UTMパラメータを追加（存在する場合のみ）
                 if (utmParams.toString()) {

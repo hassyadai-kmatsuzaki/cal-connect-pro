@@ -51,6 +51,33 @@
             errorDiv.classList.remove('hidden');
         }
 
+        // 流入経路を追跡する関数
+        async function trackInflowSource(source, tenantId, utmParams) {
+            try {
+                const response = await fetch(`/api/liff/${tenantId}/track-inflow`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({
+                        source: source,
+                        utm_params: Object.fromEntries(utmParams)
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('流入経路の追跡に失敗しました');
+                }
+                
+                const result = await response.json();
+                console.log('Inflow tracked:', result);
+            } catch (error) {
+                console.error('Failed to track inflow:', error);
+                // エラーが発生しても処理を続行
+            }
+        }
+
         // LIFF初期化と認証処理
         async function initializeLiff() {
             try {
@@ -67,6 +94,7 @@
 
                 const route = getQueryParam('route');
                 const slug = getQueryParam('slug');
+                const source = getQueryParam('source');
                 const formId = getQueryParam('id');
                 const tenantId = "{{ $tenantId }}";
                 
@@ -75,6 +103,7 @@
                     const params = new URLSearchParams();
                     if (route) params.append('route', route);
                     if (slug) params.append('slug', slug);
+                    if (source) params.append('source', source);
                     if (formId) params.append('id', formId);
                     
                     const redirectUri = `${window.location.origin}${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
@@ -107,6 +136,17 @@
 
                 let redirectUrl;
                 switch (route) {
+                    case 'add':
+                        // 友だち追加処理
+                        if (!source) {
+                            showError('sourceパラメータが指定されていません');
+                            return;
+                        }
+                        // 友だち追加の流入経路を追跡
+                        await trackInflowSource(source, tenantId, utmParams);
+                        // 友だち追加URLにリダイレクト
+                        redirectUrl = 'https://line.me/R/ti/p/@your_line_id';
+                        break;
                     case 'booking':
                         // slugが指定されている場合は使用、なければデフォルトのカレンダーID（1）を使用
                         const calendarId = slug || '1';

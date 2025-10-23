@@ -44,6 +44,12 @@ class LiffController extends Controller
                         return $tenantLiffController->getUser($request);
                     }
                     break;
+                case 'POST':
+                    if ($request->is('*/track-inflow')) {
+                        Log::info('Calling tenant trackInflow method');
+                        return $tenantLiffController->trackInflow($request);
+                    }
+                    break;
             }
 
             Log::warning('LIFF endpoint not found', [

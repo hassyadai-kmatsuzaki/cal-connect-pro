@@ -23,6 +23,7 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     Route::post('/liff/{tenant_id}/login', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
     Route::get('/liff/{tenant_id}/user', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
     Route::post('/liff/{tenant_id}/reservations', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
+    Route::post('/liff/{tenant_id}/track-inflow', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
     
     // LIFF用のカレンダーAPI
     Route::get('/liff/{tenant_id}/calendars/{calendarId}', function ($tenantId, $calendarId) {

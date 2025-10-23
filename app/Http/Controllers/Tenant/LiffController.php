@@ -83,8 +83,72 @@ class LiffController extends Controller
     }
 
     /**
-     * LIFF用ユーザー情報取得
+     * 流入経路を追跡
      */
+    public function trackInflow(Request $request)
+    {
+        \Log::info('LIFF track inflow request received', [
+            'request_data' => $request->all(),
+            'tenant_id' => tenant('id'),
+        ]);
+
+        $validator = Validator::make($request->all(), [
+            'source' => 'required|string',
+            'utm_params' => 'nullable|array',
+        ]);
+
+        if ($validator->fails()) {
+            \Log::error('LIFF track inflow validation failed', [
+                'errors' => $validator->errors(),
+                'request_data' => $request->all(),
+            ]);
+            return response()->json([
+                'message' => 'バリデーションエラー',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            // LINEユーザー情報を取得
+            $lineUser = LineUser::where('line_user_id', $request->line_user_id)->first();
+            
+            if ($lineUser) {
+                // 流入経路を特定
+                $inflowSource = \App\Models\InflowSource::where('source_key', $request->source)
+                    ->where('is_active', true)
+                    ->first();
+                
+                if ($inflowSource) {
+                    // 流入経路を更新
+                    $lineUser->update(['inflow_source_id' => $inflowSource->id]);
+                    $inflowSource->increment('views');
+                    
+                    \Log::info('Inflow tracked successfully', [
+                        'line_user_id' => $lineUser->line_user_id,
+                        'inflow_source_id' => $inflowSource->id,
+                        'tenant_id' => tenant('id'),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'message' => '流入経路を追跡しました',
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('LIFF track inflow failed: ' . $e->getMessage(), [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+                'tenant_id' => tenant('id'),
+            ]);
+            
+            return response()->json([
+                'message' => '流入経路の追跡に失敗しました',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
     public function getUser(Request $request)
     {
         $lineUserId = $request->query('line_user_id');

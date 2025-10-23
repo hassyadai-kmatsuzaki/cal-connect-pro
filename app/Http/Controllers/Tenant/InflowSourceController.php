@@ -90,14 +90,7 @@ class InflowSourceController extends Controller
             $sourceKey = $request->source_key ?? Str::random(8);
             
             // LIFF URLを生成（友だち追加用）
-            $tenantDomain = tenant('id'); // テナントIDを取得
-            
-            // 環境に応じてベースURLを決定
-            $baseUrl = app()->environment('production') 
-                ? 'https://anken.cloud' 
-                : 'http://localhost:8230';
-            
-            $liffUrl = "{$baseUrl}/inflow/{$tenantDomain}?source={$sourceKey}";
+            $liffUrl = "https://liff.line.me/2007665716-GlDK41rD?route=add&source={$sourceKey}";
             
             $source = InflowSource::create([
                 'name' => $request->name,
