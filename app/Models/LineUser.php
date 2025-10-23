@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -16,16 +17,29 @@ class LineUser extends Model
         'display_name',
         'picture_url',
         'status_message',
+        'inflow_source_id',
         'added_at',
         'last_message_at',
         'is_blocked',
+        'is_active',
+        'followed_at',
     ];
 
     protected $casts = [
         'added_at' => 'datetime',
         'last_message_at' => 'datetime',
         'is_blocked' => 'boolean',
+        'is_active' => 'boolean',
+        'followed_at' => 'datetime',
     ];
+
+    /**
+     * 流入経路
+     */
+    public function inflowSource(): BelongsTo
+    {
+        return $this->belongsTo(InflowSource::class);
+    }
 
     /**
      * タグ

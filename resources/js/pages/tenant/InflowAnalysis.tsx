@@ -63,6 +63,8 @@ interface InflowSource {
   conversions: number;
   conversion_rate: number;
   is_active: boolean;
+  welcome_message?: string;
+  enable_welcome_message?: boolean;
   created_at: string;
 }
 
@@ -99,6 +101,8 @@ const InflowAnalysis: React.FC = () => {
     name: '',
     source_key: '',
     calendar_id: '',
+    welcome_message: '',
+    enable_welcome_message: false,
   });
   
   const [snackbar, setSnackbar] = useState({
@@ -174,6 +178,8 @@ const InflowAnalysis: React.FC = () => {
         name: source.name,
         source_key: source.source_key,
         calendar_id: source.calendar_id.toString(),
+        welcome_message: source.welcome_message || '',
+        enable_welcome_message: source.enable_welcome_message || false,
       });
     } else {
       setSelectedSource(null);
@@ -181,6 +187,8 @@ const InflowAnalysis: React.FC = () => {
         name: '',
         source_key: '',
         calendar_id: '',
+        welcome_message: '',
+        enable_welcome_message: false,
       });
     }
     setOpenDialog(true);
@@ -193,6 +201,8 @@ const InflowAnalysis: React.FC = () => {
       name: '',
       source_key: '',
       calendar_id: '',
+      welcome_message: '',
+      enable_welcome_message: false,
     });
   };
 
@@ -222,6 +232,8 @@ const InflowAnalysis: React.FC = () => {
         const response = await axios.put(`/api/inflow-sources/${selectedSource.id}`, {
           name: formData.name,
           calendar_id: formData.calendar_id,
+          welcome_message: formData.welcome_message,
+          enable_welcome_message: formData.enable_welcome_message,
         });
         setSnackbar({
           open: true,
@@ -234,6 +246,8 @@ const InflowAnalysis: React.FC = () => {
           name: formData.name,
           source_key: formData.source_key || undefined,
           calendar_id: formData.calendar_id,
+          welcome_message: formData.welcome_message,
+          enable_welcome_message: formData.enable_welcome_message,
         });
         setSnackbar({
           open: true,
@@ -564,6 +578,42 @@ const InflowAnalysis: React.FC = () => {
                   識別キーは作成後は変更できません
                 </Alert>
               )}
+
+              <Divider />
+
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  友だち追加時の自動メッセージ設定
+                </Typography>
+                
+                <FormControl fullWidth>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <input
+                      type="checkbox"
+                      id="enable_welcome_message"
+                      checked={formData.enable_welcome_message}
+                      onChange={(e) => setFormData({ ...formData, enable_welcome_message: e.target.checked })}
+                      style={{ marginRight: 8 }}
+                    />
+                    <label htmlFor="enable_welcome_message">
+                      カスタムウェルカムメッセージを有効にする
+                    </label>
+                  </Box>
+                </FormControl>
+
+                {formData.enable_welcome_message && (
+                  <TextField
+                    label="ウェルカムメッセージ"
+                    fullWidth
+                    multiline
+                    rows={4}
+                    value={formData.welcome_message}
+                    onChange={(e) => setFormData({ ...formData, welcome_message: e.target.value })}
+                    placeholder="🎉 友だち追加ありがとうございます！&#10;&#10;{{inflow_source_name}}からご来訪いただき、ありがとうございます。&#10;こちらから簡単に予約ができます。&#10;&#10;ご利用ください！"
+                    helperText="変数: {{user_name}}, {{inflow_source_name}}"
+                  />
+                )}
+              </Box>
             </Stack>
           </DialogContent>
           <DialogActions>

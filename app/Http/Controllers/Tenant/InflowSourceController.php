@@ -77,6 +77,8 @@ class InflowSourceController extends Controller
             'name' => 'required|string|max:255',
             'calendar_id' => 'required|exists:calendars,id',
             'source_key' => 'nullable|string|max:255|unique:inflow_sources,source_key',
+            'welcome_message' => 'nullable|string|max:1000',
+            'enable_welcome_message' => 'boolean',
         ], [
             'name.required' => '流入経路名は必須です',
             'calendar_id.required' => 'カレンダーを選択してください',
@@ -111,6 +113,8 @@ class InflowSourceController extends Controller
                 'source_key' => $sourceKey,
                 'calendar_id' => $request->calendar_id,
                 'liff_url' => $liffUrl,
+                'welcome_message' => $request->welcome_message,
+                'enable_welcome_message' => $request->enable_welcome_message ?? false,
                 'is_active' => true,
             ]);
 
@@ -150,6 +154,8 @@ class InflowSourceController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'calendar_id' => 'required|exists:calendars,id',
+            'welcome_message' => 'nullable|string|max:1000',
+            'enable_welcome_message' => 'boolean',
         ], [
             'name.required' => '流入経路名は必須です',
             'calendar_id.required' => 'カレンダーを選択してください',
@@ -181,6 +187,8 @@ class InflowSourceController extends Controller
             $source->update([
                 'name' => $request->name,
                 'calendar_id' => $request->calendar_id,
+                'welcome_message' => $request->welcome_message,
+                'enable_welcome_message' => $request->enable_welcome_message ?? false,
             ]);
 
             $source->load('calendar');

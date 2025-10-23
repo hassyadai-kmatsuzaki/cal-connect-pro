@@ -20,6 +20,8 @@ class InflowSource extends Model
         'conversions',
         'is_active',
         'description',
+        'welcome_message',
+        'enable_welcome_message',
         'utm_source',
         'utm_medium',
         'utm_campaign',
@@ -31,6 +33,7 @@ class InflowSource extends Model
         'views' => 'integer',
         'conversions' => 'integer',
         'is_active' => 'boolean',
+        'enable_welcome_message' => 'boolean',
     ];
     
     protected $appends = [

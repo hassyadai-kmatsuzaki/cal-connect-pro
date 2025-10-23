@@ -100,13 +100,30 @@ class WebhookController extends Controller
                 ]
             );
 
+            // 流入経路を特定（リファラーやUTMパラメータから）
+            $inflowSource = $this->identifyInflowSource($event);
+            
+            if ($inflowSource) {
+                // 流入経路を記録
+                $lineUser->update(['inflow_source_id' => $inflowSource->id]);
+                
+                // 流入経路のビュー数を増加
+                $inflowSource->increment('views');
+                
+                Log::info('Inflow source identified for new friend', [
+                    'user_id' => $userId,
+                    'inflow_source_id' => $inflowSource->id,
+                    'inflow_source_name' => $inflowSource->name,
+                ]);
+            }
+
             // ウェルカムメッセージを送信
-            $lineMessagingService = new LineMessagingService();
-            $lineMessagingService->sendWelcomeMessage($userId);
+            $this->sendWelcomeMessage($userId, $inflowSource);
 
             Log::info('User followed successfully', [
                 'user_id' => $userId,
                 'display_name' => $profile['displayName'] ?? '',
+                'inflow_source_id' => $inflowSource?->id,
             ]);
 
         } catch (\Exception $e) {
@@ -193,10 +210,65 @@ class WebhookController extends Controller
     {
         $text = $message['text'] ?? '';
         
-        // 簡単な自動応答（必要に応じて拡張）
-        if (strpos($text, '予約') !== false) {
+        // LINEユーザーを取得
+        $lineUser = LineUser::where('line_user_id', $userId)->first();
+        if (!$lineUser) {
+            Log::warning('LineUser not found for text message', ['user_id' => $userId]);
+            return;
+        }
+
+        // 自動応答の処理
+        $this->processAutoResponse($lineUser, $text);
+    }
+
+    /**
+     * 自動応答処理
+     */
+    private function processAutoResponse(LineUser $lineUser, string $text)
+    {
+        try {
             $lineMessagingService = new LineMessagingService();
-            $lineMessagingService->sendMessage($userId, "予約については、予約ページからお手続きください。");
+            
+            // キーワード別の自動応答
+            $responses = [
+                '予約' => '📅 予約については、予約ページからお手続きください。\n\n予約ページ: [予約ページURL]',
+                'キャンセル' => '❌ 予約のキャンセルについては、予約ページからお手続きください。',
+                '時間' => '🕐 営業時間についてお答えします。\n\n平日: 9:00-18:00\n土日祝: 10:00-17:00',
+                '料金' => '💰 料金についてお答えします。\n\n詳細は予約ページをご確認ください。',
+                'アクセス' => '📍 アクセス情報をお伝えします。\n\n[住所情報]',
+                'おはよう' => 'おはようございます！😊\n\n何かお手伝いできることがあれば、お気軽にお声かけください。',
+                'こんにちは' => 'こんにちは！😊\n\n何かお手伝いできることがあれば、お気軽にお声かけください。',
+                'こんばんは' => 'こんばんは！😊\n\n何かお手伝いできることがあれば、お気軽にお声かけください。',
+            ];
+
+            // キーワードマッチング
+            foreach ($responses as $keyword => $response) {
+                if (strpos($text, $keyword) !== false) {
+                    $lineMessagingService->sendMessage($lineUser->line_user_id, $response);
+                    
+                    Log::info('Auto response sent', [
+                        'user_id' => $lineUser->line_user_id,
+                        'keyword' => $keyword,
+                        'response' => $response,
+                    ]);
+                    return;
+                }
+            }
+
+            // デフォルト応答
+            $defaultResponse = "ありがとうございます！\n\n予約やお問い合わせについては、予約ページからお手続きください。\n\n何かご不明な点がございましたら、お気軽にお声かけください。";
+            $lineMessagingService->sendMessage($lineUser->line_user_id, $defaultResponse);
+            
+            Log::info('Default auto response sent', [
+                'user_id' => $lineUser->line_user_id,
+                'text' => $text,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to process auto response: ' . $e->getMessage(), [
+                'user_id' => $lineUser->line_user_id,
+                'text' => $text,
+            ]);
         }
     }
 
@@ -278,6 +350,75 @@ class WebhookController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to get user profile: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    /**
+     * 流入経路を特定
+     */
+    private function identifyInflowSource(array $event): ?\App\Models\InflowSource
+    {
+        try {
+            // リファラー情報から流入経路を特定
+            $referrer = $event['source']['referrer'] ?? null;
+            
+            if ($referrer) {
+                // リファラーURLから流入経路を特定
+                $inflowSource = \App\Models\InflowSource::where('liff_url', 'like', '%' . $referrer . '%')
+                    ->where('is_active', true)
+                    ->first();
+                
+                if ($inflowSource) {
+                    return $inflowSource;
+                }
+            }
+
+            // デフォルトの流入経路を取得（最初のアクティブな流入経路）
+            return \App\Models\InflowSource::where('is_active', true)->first();
+
+        } catch (\Exception $e) {
+            Log::error('Failed to identify inflow source: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * ウェルカムメッセージを送信
+     */
+    private function sendWelcomeMessage(string $userId, ?\App\Models\InflowSource $inflowSource = null)
+    {
+        try {
+            $lineMessagingService = new LineMessagingService();
+            
+            // 流入経路にカスタムウェルカムメッセージが設定されている場合
+            if ($inflowSource && $inflowSource->enable_welcome_message && $inflowSource->welcome_message) {
+                $message = $inflowSource->welcome_message;
+                
+                // プレースホルダーを置換
+                $message = str_replace('{{user_name}}', 'LINEユーザー', $message);
+                $message = str_replace('{{inflow_source_name}}', $inflowSource->name, $message);
+                
+                $lineMessagingService->sendMessage($userId, $message);
+                
+                Log::info('Custom welcome message sent', [
+                    'user_id' => $userId,
+                    'inflow_source_id' => $inflowSource->id,
+                    'message' => $message,
+                ]);
+            } else {
+                // デフォルトのウェルカムメッセージ
+                $lineMessagingService->sendWelcomeMessage($userId);
+                
+                Log::info('Default welcome message sent', [
+                    'user_id' => $userId,
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send welcome message: ' . $e->getMessage(), [
+                'user_id' => $userId,
+                'inflow_source_id' => $inflowSource?->id,
+            ]);
         }
     }
 
