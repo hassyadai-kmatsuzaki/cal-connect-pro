@@ -104,9 +104,9 @@ class LiffController extends Controller
     public function createReservation(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'calendar_id' => 'required|exists:calendars,id',
+            'calendar_id' => 'nullable|exists:calendars,id',
             'reservation_datetime' => 'required|date|after:now',
-            'duration_minutes' => 'required|integer|min:15',
+            'duration_minutes' => 'nullable|integer|min:15',
             'customer_name' => 'required|string|max:255',
             'customer_email' => 'nullable|email|max:255',
             'customer_phone' => 'nullable|string|max:50',
@@ -131,11 +131,15 @@ class LiffController extends Controller
                 ], 404);
             }
 
+            // デフォルト値を設定
+            $calendarId = $request->calendar_id ?: 1; // デフォルトはカレンダーID 1
+            $durationMinutes = $request->duration_minutes ?: 60; // デフォルトは60分
+
             $reservation = Reservation::create([
-                'calendar_id' => $request->calendar_id,
+                'calendar_id' => $calendarId,
                 'line_user_id' => $lineUser->id,
                 'reservation_datetime' => $request->reservation_datetime,
-                'duration_minutes' => $request->duration_minutes,
+                'duration_minutes' => $durationMinutes,
                 'customer_name' => $request->customer_name,
                 'customer_email' => $request->customer_email,
                 'customer_phone' => $request->customer_phone,
