@@ -28,7 +28,16 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     // LIFF用のページ
     Route::get('/liff/{tenant_id}', function ($tenantId) {
         $lineSetting = \App\Models\LineSetting::first();
-        return view('liff', compact('lineSetting', 'tenantId'));
+        $liffId = $lineSetting ? $lineSetting->liff_id : null;
+        
+        // デバッグ用ログ
+        \Log::info('LIFF page accessed', [
+            'tenant_id' => $tenantId,
+            'line_setting_exists' => $lineSetting ? true : false,
+            'liff_id' => $liffId,
+        ]);
+        
+        return view('liff', compact('lineSetting', 'tenantId', 'liffId'));
     })->name('liff');
     
     // 流入経路測定用LIFFページ

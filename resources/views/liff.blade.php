@@ -54,7 +54,16 @@
         // LIFF初期化と認証処理
         async function initializeLiff() {
             try {
-                await liff.init({ liffId: "{{ $liffId }}" });
+                const liffId = "{{ $liffId ?? '' }}";
+                
+                // liffIdが設定されているかチェック
+                if (!liffId || liffId.trim() === '') {
+                    showError('LIFF IDが設定されていません。管理者にお問い合わせください。');
+                    return;
+                }
+                
+                console.log('Initializing LIFF with ID:', liffId);
+                await liff.init({ liffId: liffId });
 
                 const route = getQueryParam('route');
                 const slug = getQueryParam('slug');
