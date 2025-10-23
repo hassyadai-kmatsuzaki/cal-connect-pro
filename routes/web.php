@@ -15,20 +15,8 @@ Route::get('/sanctum/csrf-cookie', function () {
 // Google Calendar OAuth コールバック（中央ドメイン）
 Route::get('/api/google-calendar/callback', [GoogleCalendarCallbackController::class, 'handleCallback']);
 
-// セントラルドメイン経由のLINE Webhook（テナントIDパラメーターでテナントを特定）
+// セントラルドメイン経由のLIFF ページ（テナントIDパラメーターでテナントを特定）
 Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group(function () {
-    Route::post('/api/line/webhook/{tenant_id}', [WebhookController::class, 'handle']);
-    Route::post('/api/liff/{tenant_id}/login', [LiffController::class, 'handle']);
-    Route::get('/api/liff/{tenant_id}/user', [LiffController::class, 'handle']);
-    Route::post('/api/liff/{tenant_id}/reservations', [LiffController::class, 'handle']);
-    
-    // LIFF用のカレンダーAPI
-    Route::get('/api/liff/{tenant_id}/calendars/{calendarId}', [App\Http\Controllers\Tenant\PublicReservationController::class, 'getCalendar']);
-    Route::get('/api/liff/{tenant_id}/calendars/{calendarId}/available-slots', [App\Http\Controllers\Tenant\PublicReservationController::class, 'getAvailableSlots']);
-    
-    // 流入経路追跡API
-    Route::post('/api/inflow-sources/track', [App\Http\Controllers\Tenant\InflowSourceController::class, 'track']);
-    
     // LIFF用のページ
     Route::get('/liff/{tenant_id}', function ($tenantId) {
         $lineSetting = \App\Models\LineSetting::first();
@@ -76,6 +64,7 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
 
 // SPAのフォールバックルート（セントラル&テナント共通）
 // JavaScriptで適切なページを表示
-Route::fallback(function () {
+// APIルートは api.php で処理されるため、ここでは除外
+Route::get('/{any}', function () {
     return view('app');
-});
+})->where('any', '.*');

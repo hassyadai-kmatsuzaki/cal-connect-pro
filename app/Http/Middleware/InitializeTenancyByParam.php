@@ -12,6 +12,12 @@ class InitializeTenancyByParam
     public function handle(Request $request, Closure $next)
     {
         $tenantId = $request->route('tenant_id');
+        
+        Log::info('InitializeTenancyByParam middleware called', [
+            'tenant_id' => $tenantId,
+            'url' => $request->url(),
+            'method' => $request->method(),
+        ]);
 
         if (!$tenantId) {
             Log::error('Tenant ID not provided in webhook URL');

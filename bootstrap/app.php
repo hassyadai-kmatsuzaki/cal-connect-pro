@@ -7,11 +7,15 @@ use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // Tenant routes with tenancy middleware (must be registered first for API routes)
+            // API routes (processed first to ensure they take precedence over fallback)
+            Route::prefix('api')
+                ->middleware('api')
+                ->group(base_path('routes/api.php'));
+            
+            // Tenant routes with tenancy middleware
             Route::middleware([
                 Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
                 Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,

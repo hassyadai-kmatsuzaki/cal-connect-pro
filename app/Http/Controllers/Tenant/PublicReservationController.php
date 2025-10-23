@@ -21,9 +21,22 @@ class PublicReservationController extends Controller
      */
     public function getCalendar($id, Request $request)
     {
+        \Log::info('PublicReservationController::getCalendar called', [
+            'calendar_id' => $id,
+            'tenant_id' => tenant('id'),
+            'request_url' => $request->url(),
+        ]);
+        
         $calendar = Calendar::with(['hearingForm.items'])->find($id);
         
+        \Log::info('Calendar query result', [
+            'calendar_found' => $calendar ? true : false,
+            'calendar_id' => $calendar ? $calendar->id : null,
+            'calendar_name' => $calendar ? $calendar->name : null,
+        ]);
+        
         if (!$calendar) {
+            \Log::warning('Calendar not found', ['calendar_id' => $id]);
             return response()->json([
                 'message' => 'カレンダーが見つかりません',
             ], 404);
