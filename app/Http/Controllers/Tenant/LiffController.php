@@ -297,21 +297,39 @@ class LiffController extends Controller
             if ($calendar->line_reply_message) {
                 $message = $this->buildCustomMessage($calendar->line_reply_message, $reservation);
                 
-                // カスタムメッセージに{{meet_url}}が含まれていない場合のみ追加
-                if ($calendar->include_meet_url && !str_contains($calendar->line_reply_message, '{{meet_url}}')) {
-                    $meetUrl = $this->generateMeetUrl($reservation);
-                    if ($meetUrl) {
-                        $message .= "\n\n📹 ミーティングURL:\n{$meetUrl}";
-                    }
+            // カスタムメッセージに{{meet_url}}が含まれていない場合のみ追加
+            if ($calendar->include_meet_url && !str_contains($calendar->line_reply_message, '{{meet_url}}')) {
+                $meetUrl = $this->generateMeetUrl($reservation);
+                if ($meetUrl && $this->validateMeetUrl($meetUrl)) {
+                    $message .= "\n\n📹 ミーティングURL:\n{$meetUrl}";
+                    \Log::info('Meet URL added to custom message', [
+                        'reservation_id' => $reservation->id,
+                        'meet_url' => $meetUrl,
+                    ]);
+                } else {
+                    \Log::warning('Meet URL validation failed, not adding to message', [
+                        'reservation_id' => $reservation->id,
+                        'meet_url' => $meetUrl,
+                    ]);
                 }
+            }
             } else {
                 $message = $this->buildDefaultMessage($reservation);
                 
                 // デフォルトメッセージの場合もMeet URLを追加
                 if ($calendar->include_meet_url) {
                     $meetUrl = $this->generateMeetUrl($reservation);
-                    if ($meetUrl) {
+                    if ($meetUrl && $this->validateMeetUrl($meetUrl)) {
                         $message .= "\n\n📹 ミーティングURL:\n{$meetUrl}";
+                        \Log::info('Meet URL added to default message', [
+                            'reservation_id' => $reservation->id,
+                            'meet_url' => $meetUrl,
+                        ]);
+                    } else {
+                        \Log::warning('Meet URL validation failed for default message', [
+                            'reservation_id' => $reservation->id,
+                            'meet_url' => $meetUrl,
+                        ]);
                     }
                 }
             }
@@ -382,6 +400,11 @@ class LiffController extends Controller
         try {
             // データベースに保存されたMeet URLを優先的に使用
             if ($reservation->meet_url) {
+                \Log::info('Using stored Meet URL from database', [
+                    'reservation_id' => $reservation->id,
+                    'stored_meet_url' => $reservation->meet_url,
+                    'meet_url_valid' => $this->validateMeetUrl($reservation->meet_url),
+                ]);
                 return $reservation->meet_url;
             }
             
@@ -408,15 +431,35 @@ class LiffController extends Controller
             $startDateTime = Carbon::parse($reservation->reservation_datetime)->toRfc3339String();
             $endDateTime = Carbon::parse($reservation->reservation_datetime)->addMinutes($reservation->duration_minutes)->toRfc3339String();
             
+            \Log::info('Searching for Google Calendar events', [
+                'reservation_id' => $reservation->id,
+                'search_start' => $startDateTime,
+                'search_end' => $endDateTime,
+                'user_calendar_id' => $user->google_calendar_id,
+            ]);
+            
             $events = $googleCalendarService->getEvents(
                 $calendar->google_calendar_id ?? 'primary',
                 $startDateTime,
                 $endDateTime
             );
             
+            \Log::info('Found Google Calendar events', [
+                'reservation_id' => $reservation->id,
+                'events_count' => count($events),
+                'events' => $events,
+            ]);
+            
             foreach ($events as $event) {
                 if (isset($event['conferenceData']['entryPoints'][0]['uri'])) {
-                    return $event['conferenceData']['entryPoints'][0]['uri'];
+                    $meetUrl = $event['conferenceData']['entryPoints'][0]['uri'];
+                    \Log::info('Extracted Meet URL from Google Calendar event', [
+                        'reservation_id' => $reservation->id,
+                        'event_id' => $event['id'] ?? null,
+                        'meet_url' => $meetUrl,
+                        'meet_url_valid' => $this->validateMeetUrl($meetUrl),
+                    ]);
+                    return $meetUrl;
                 }
             }
             
@@ -436,6 +479,63 @@ class LiffController extends Controller
             
             // エラーの場合はnullを返す（無効なURLは生成しない）
             return null;
+        }
+    }
+    
+    /**
+     * Meet URLの有効性を検証
+     */
+    private function validateMeetUrl(string $meetUrl): bool
+    {
+        try {
+            // Google Meet URLの形式をチェック
+            if (!preg_match('/^https:\/\/meet\.google\.com\/[a-z0-9-]+$/', $meetUrl)) {
+                \Log::warning('Invalid Meet URL format', [
+                    'meet_url' => $meetUrl,
+                ]);
+                return false;
+            }
+            
+            // URLの基本検証
+            $parsedUrl = parse_url($meetUrl);
+            if (!$parsedUrl || !isset($parsedUrl['host']) || !isset($parsedUrl['path'])) {
+                \Log::warning('Invalid Meet URL structure', [
+                    'meet_url' => $meetUrl,
+                    'parsed_url' => $parsedUrl,
+                ]);
+                return false;
+            }
+            
+            // ホストが正しいかチェック
+            if ($parsedUrl['host'] !== 'meet.google.com') {
+                \Log::warning('Invalid Meet URL host', [
+                    'meet_url' => $meetUrl,
+                    'host' => $parsedUrl['host'],
+                ]);
+                return false;
+            }
+            
+            // パスが正しいかチェック
+            $path = trim($parsedUrl['path'], '/');
+            if (empty($path) || !preg_match('/^[a-z0-9-]+$/', $path)) {
+                \Log::warning('Invalid Meet URL path', [
+                    'meet_url' => $meetUrl,
+                    'path' => $path,
+                ]);
+                return false;
+            }
+            
+            \Log::info('Meet URL validation passed', [
+                'meet_url' => $meetUrl,
+            ]);
+            return true;
+            
+        } catch (\Exception $e) {
+            \Log::error('Meet URL validation failed: ' . $e->getMessage(), [
+                'meet_url' => $meetUrl,
+                'error_trace' => $e->getTraceAsString(),
+            ]);
+            return false;
         }
     }
     /**
