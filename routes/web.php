@@ -46,7 +46,17 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     
     // /book/{tenant_id}/{calendarId} も追加（URLの互換性のため）
     Route::get('/book/{tenant_id}/{calendarId}', function ($tenantId, $calendarId) {
+        // InitializeTenancyByParamミドルウェアでテナントコンテキストが初期化されている
         $lineSetting = \App\Models\LineSetting::first();
+        
+        // デバッグ用ログ
+        \Log::info('LIFF booking page accessed', [
+            'tenant_id' => $tenantId,
+            'calendar_id' => $calendarId,
+            'line_setting_exists' => $lineSetting ? true : false,
+            'liff_id' => $lineSetting ? $lineSetting->liff_id : null,
+        ]);
+        
         return view('booking.index', compact('calendarId', 'lineSetting', 'tenantId'));
     })->name('book');
 });

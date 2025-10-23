@@ -626,6 +626,14 @@
         // LIFF初期化
         async function initializeLiff() {
             try {
+                // liffIdが設定されているかチェック
+                if (!liffId || liffId.trim() === '') {
+                    console.error('LIFF ID is not configured');
+                    showError('LINE設定が不完全です。管理者にお問い合わせください。');
+                    return;
+                }
+                
+                console.log('Initializing LIFF with ID:', liffId);
                 await liff.init({ liffId: liffId });
                 
                 if (!liff.isLoggedIn()) {
