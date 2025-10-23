@@ -219,6 +219,11 @@ class LiffController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * LINEユーザー情報を取得
+     */
+    public function getUser(Request $request)
     {
         $lineUserId = $request->query('line_user_id');
         
