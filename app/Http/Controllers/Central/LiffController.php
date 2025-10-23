@@ -36,6 +36,9 @@ class LiffController extends Controller
                     } elseif ($request->is('*/reservations')) {
                         Log::info('Calling tenant createReservation method');
                         return $tenantLiffController->createReservation($request);
+                    } elseif ($request->is('*/track-inflow')) {
+                        Log::info('Calling tenant trackInflow method');
+                        return $tenantLiffController->trackInflow($request);
                     }
                     break;
                 case 'GET':
@@ -45,12 +48,6 @@ class LiffController extends Controller
                     } elseif ($request->is('*/line-setting')) {
                         Log::info('Calling tenant getLineSetting method');
                         return $tenantLiffController->getLineSetting($request);
-                    }
-                    break;
-                case 'POST':
-                    if ($request->is('*/track-inflow')) {
-                        Log::info('Calling tenant trackInflow method');
-                        return $tenantLiffController->trackInflow($request);
                     }
                     break;
             }
