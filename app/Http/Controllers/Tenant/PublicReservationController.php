@@ -19,9 +19,9 @@ class PublicReservationController extends Controller
     /**
      * カレンダー情報を取得（公開用）
      */
-    public function getCalendar($id, Request $request)
+    public function getCalendar(Request $request, $id)
     {
-        \Log::info('PublicReservationController::getCalendar called', [
+        \Log::error('PublicReservationController::getCalendar called', [
             'calendar_id' => $id,
             'tenant_id' => tenant('id'),
             'request_url' => $request->url(),
@@ -29,14 +29,14 @@ class PublicReservationController extends Controller
         
         $calendar = Calendar::with(['hearingForm.items'])->find($id);
         
-        \Log::info('Calendar query result', [
+        \Log::error('Calendar query result', [
             'calendar_found' => $calendar ? true : false,
             'calendar_id' => $calendar ? $calendar->id : null,
             'calendar_name' => $calendar ? $calendar->name : null,
         ]);
         
         if (!$calendar) {
-            \Log::warning('Calendar not found', ['calendar_id' => $id]);
+            \Log::error('Calendar not found', ['calendar_id' => $id]);
             return response()->json([
                 'message' => 'カレンダーが見つかりません',
             ], 404);

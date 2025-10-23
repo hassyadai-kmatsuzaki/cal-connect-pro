@@ -25,18 +25,22 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     Route::post('/liff/{tenant_id}/reservations', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
     
     // LIFF用のカレンダーAPI
-    Route::get('/liff/{tenant_id}/calendars/{calendarId}', [\App\Http\Controllers\Tenant\PublicReservationController::class, 'getCalendar']);
-    Route::get('/liff/{tenant_id}/calendars/{calendarId}/available-slots', [\App\Http\Controllers\Tenant\PublicReservationController::class, 'getAvailableSlots']);
-    
-    // テスト用ルート
-    Route::get('/liff/{tenant_id}/test', function ($tenantId) {
-        \Log::info('Test route called', ['tenant_id' => $tenantId, 'current_tenant' => tenant('id')]);
-        return response()->json(['message' => 'Test successful', 'tenant_id' => $tenantId, 'current_tenant' => tenant('id')]);
+    Route::get('/liff/{tenant_id}/calendars/{calendarId}', function ($tenantId, $calendarId) {
+        \Log::error('Calendar API route called', [
+            'tenant_id' => $tenantId,
+            'calendar_id' => $calendarId,
+            'current_tenant' => tenant('id'),
+        ]);
+        
+        // 直接コントローラーメソッドを呼び出し
+        $controller = new \App\Http\Controllers\Tenant\PublicReservationController();
+        return $controller->getCalendar(request(), $calendarId);
     });
+    Route::get('/liff/{tenant_id}/calendars/{calendarId}/available-slots', [\App\Http\Controllers\Tenant\PublicReservationController::class, 'getAvailableSlots']);
     
     // デバッグ用ルート（ミドルウェアなし）
     Route::get('/debug/{tenant_id}', function ($tenantId) {
-        \Log::info('Debug route called', ['tenant_id' => $tenantId]);
+        \Log::error('Debug route called', ['tenant_id' => $tenantId]);
         $tenant = \App\Models\Tenant::find($tenantId);
         return response()->json([
             'message' => 'Debug route',
