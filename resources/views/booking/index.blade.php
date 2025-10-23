@@ -604,7 +604,7 @@
     <script>
         // Constants
         const calendarId = {{ $calendarId }};
-        const apiBasePath = '/api/public';
+        const apiBasePath = '/api/liff/{{ $tenantId }}';
         const liffId = '{{ $lineSetting->liff_id ?? "" }}';
         const tenantId = '{{ $tenantId }}';
 

@@ -108,11 +108,9 @@
                 let redirectUrl;
                 switch (route) {
                     case 'booking':
-                        if (!slug) {
-                            showError('slugパラメータが指定されていません');
-                            return;
-                        }
-                        redirectUrl = `/booking/${tenantId}/${slug}`;
+                        // slugが指定されている場合は使用、なければデフォルトのカレンダーID（1）を使用
+                        const calendarId = slug || '1';
+                        redirectUrl = `/book/${tenantId}/${calendarId}`;
                         break;
                     case 'inflow':
                         if (!slug) {

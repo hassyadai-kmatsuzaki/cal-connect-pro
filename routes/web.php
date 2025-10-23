@@ -22,6 +22,10 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     Route::get('/api/liff/{tenant_id}/user', [LiffController::class, 'handle']);
     Route::post('/api/liff/{tenant_id}/reservations', [LiffController::class, 'handle']);
     
+    // LIFF用のカレンダーAPI
+    Route::get('/api/liff/{tenant_id}/calendars/{calendarId}', [App\Http\Controllers\Tenant\PublicReservationController::class, 'getCalendar']);
+    Route::get('/api/liff/{tenant_id}/calendars/{calendarId}/available-slots', [App\Http\Controllers\Tenant\PublicReservationController::class, 'getAvailableSlots']);
+    
     // 流入経路追跡API
     Route::post('/api/inflow-sources/track', [App\Http\Controllers\Tenant\InflowSourceController::class, 'track']);
     
