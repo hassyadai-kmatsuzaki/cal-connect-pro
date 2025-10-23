@@ -724,7 +724,11 @@
 
             document.getElementById('backToForm').addEventListener('click', () => {
                 document.getElementById('step3').classList.add('hidden');
-                document.getElementById('step2').classList.remove('hidden');
+                if (hasHearingForm) {
+                    document.getElementById('step2').classList.remove('hidden');
+                } else {
+                    document.getElementById('step1').classList.remove('hidden');
+                }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
 
@@ -918,10 +922,9 @@
             });
             event.currentTarget.classList.add('selected');
             
-            // Move to information input section after a short delay
+            // Move to next section after a short delay
             setTimeout(() => {
                 document.getElementById('step1').classList.add('hidden');
-                document.getElementById('step2').classList.remove('hidden');
                 
                 // Update summary
                 const dateObj = new Date(selectedDate);
@@ -929,9 +932,14 @@
                 document.getElementById('summaryDateTime').textContent = 
                     `${dateObj.getMonth() + 1}月${dateObj.getDate()}日(${dayNames[dateObj.getDay()]}) ${slot.start_time}`;
                 
-                // Render hearing form if available
                 if (hasHearingForm) {
+                    // ヒアリングフォームがある場合は情報入力ページへ
+                    document.getElementById('step2').classList.remove('hidden');
                     renderHearingForm();
+                } else {
+                    // ヒアリングフォームがない場合は確認画面へ直接移動
+                    showConfirmation();
+                    document.getElementById('step3').classList.remove('hidden');
                 }
                 
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1125,7 +1133,7 @@
                 </div>
                 <div class="summary-row">
                     <span class="summary-label">お名前</span>
-                    <span class="summary-value">${document.getElementById('customerName').value}</span>
+                    <span class="summary-value">${lineUser?.display_name || 'LINEユーザー'}</span>
                 </div>
             `;
             
