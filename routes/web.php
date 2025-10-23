@@ -43,6 +43,12 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
         $calendarId = 1; // 仮のカレンダーID、実際にはslugから取得
         return view('booking.index', compact('calendarId', 'lineSetting', 'tenantId'));
     })->name('booking');
+    
+    // /book/{tenant_id}/{calendarId} も追加（URLの互換性のため）
+    Route::get('/book/{tenant_id}/{calendarId}', function ($tenantId, $calendarId) {
+        $lineSetting = \App\Models\LineSetting::first();
+        return view('booking.index', compact('calendarId', 'lineSetting', 'tenantId'));
+    })->name('book');
 });
 
 // SPAのフォールバックルート（セントラル&テナント共通）

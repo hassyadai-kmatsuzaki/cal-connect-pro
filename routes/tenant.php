@@ -30,17 +30,30 @@ Route::prefix('/api')->middleware([
     require __DIR__ . '/tenant_api.php';
 });
 
-// 公開予約ページ（認証不要）
+// 公開予約ページ（認証不要）- セントラルドメインのLIFFページにリダイレクト
 Route::middleware(['web'])->group(function () {
     Route::get('/booking/{calendarId}', function ($calendarId) {
+        // テナントIDを取得
         $tenantId = tenant('id');
-        $lineSetting = \App\Models\LineSetting::first();
-        return view('booking.index', [
-            'calendarId' => $calendarId,
-            'tenantId' => $tenantId,
-            'lineSetting' => $lineSetting
-        ]);
+        
+        // セントラルドメインのLIFFページにリダイレクト
+        $protocol = app()->environment('production') ? 'https' : 'http';
+        $centralDomain = app()->environment('production') ? 'anken.cloud' : 'localhost:8230';
+        
+        return redirect("{$protocol}://{$centralDomain}/book/{$tenantId}/{$calendarId}");
     })->name('booking.index');
+    
+    // /book/{calendarId} も追加（URLの互換性のため）
+    Route::get('/book/{calendarId}', function ($calendarId) {
+        // テナントIDを取得
+        $tenantId = tenant('id');
+        
+        // セントラルドメインのLIFFページにリダイレクト
+        $protocol = app()->environment('production') ? 'https' : 'http';
+        $centralDomain = app()->environment('production') ? 'anken.cloud' : 'localhost:8230';
+        
+        return redirect("{$protocol}://{$centralDomain}/book/{$tenantId}/{$calendarId}");
+    })->name('book.index');
 });
 
 // フロントエンドルートはweb.phpのfallbackで処理
