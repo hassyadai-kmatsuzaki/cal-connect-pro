@@ -36,7 +36,17 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
         $controller = new \App\Http\Controllers\Tenant\PublicReservationController();
         return $controller->getCalendar($calendarId, request());
     });
-    Route::get('/liff/{tenant_id}/calendars/{calendarId}/available-slots', [\App\Http\Controllers\Tenant\PublicReservationController::class, 'getAvailableSlots']);
+    Route::get('/liff/{tenant_id}/calendars/{calendarId}/available-slots', function ($tenantId, $calendarId) {
+        \Log::error('Available slots API route called', [
+            'tenant_id' => $tenantId,
+            'calendar_id' => $calendarId,
+            'current_tenant' => tenant('id'),
+        ]);
+        
+        // 直接コントローラーメソッドを呼び出し
+        $controller = new \App\Http\Controllers\Tenant\PublicReservationController();
+        return $controller->getAvailableSlots($calendarId, request());
+    });
     
     // デバッグ用ルート（ミドルウェアなし）
     Route::get('/debug/{tenant_id}', function ($tenantId) {
