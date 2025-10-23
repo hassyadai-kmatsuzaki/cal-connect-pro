@@ -233,25 +233,15 @@ class LiffController extends Controller
                     ];
                 }
 
-                $eventId = $googleCalendarService->createEventForAdmin($user->google_refresh_token, $user->google_calendar_id, $eventData);
+                $eventResponse = $googleCalendarService->createEventForAdmin($user->google_refresh_token, $user->google_calendar_id, $eventData);
                 
-                if ($eventId) {
-                    // Meet URLを取得
+                if ($eventResponse && isset($eventResponse['id'])) {
+                    $eventId = $eventResponse['id'];
                     $meetUrl = null;
-                    if ($reservation->calendar->include_meet_url) {
-                        $googleCalendarService->setUser($user);
-                        $events = $googleCalendarService->getEvents(
-                            $user->google_calendar_id,
-                            Carbon::parse($reservation->reservation_datetime)->toRfc3339String(),
-                            Carbon::parse($reservation->reservation_datetime)->addMinutes($reservation->duration_minutes)->toRfc3339String()
-                        );
-                        
-                        foreach ($events as $event) {
-                            if ($event['id'] === $eventId && isset($event['conferenceData']['entryPoints'][0]['uri'])) {
-                                $meetUrl = $event['conferenceData']['entryPoints'][0]['uri'];
-                                break;
-                            }
-                        }
+                    
+                    // Meet URLを取得
+                    if ($reservation->calendar->include_meet_url && isset($eventResponse['conferenceData']['entryPoints'][0]['uri'])) {
+                        $meetUrl = $eventResponse['conferenceData']['entryPoints'][0]['uri'];
                     }
                     
                     $reservation->update([
@@ -264,6 +254,7 @@ class LiffController extends Controller
                         'user_id' => $user->id,
                         'event_id' => $eventId,
                         'meet_url' => $meetUrl,
+                        'event_response' => $eventResponse,
                     ]);
                 }
             }

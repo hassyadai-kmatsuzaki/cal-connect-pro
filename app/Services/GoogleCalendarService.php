@@ -388,14 +388,17 @@ class GoogleCalendarService
             \Log::info('GoogleCalendarService: Event created successfully', [
                 'calendar_id' => $calendarId,
                 'event_id' => $responseData['id'] ?? null,
+                'meet_url' => $responseData['conferenceData']['entryPoints'][0]['uri'] ?? null,
+                'full_response' => $responseData,
             ]);
             
-            return $responseData['id'] ?? null;
+            return $responseData;
             
         } catch (\Exception $e) {
             \Log::error('GoogleCalendarService: Failed to create event', [
                 'calendar_id' => $calendarId,
                 'error' => $e->getMessage(),
+                'error_trace' => $e->getTraceAsString(),
             ]);
             return null;
         }

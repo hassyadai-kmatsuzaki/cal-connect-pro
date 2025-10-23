@@ -431,15 +431,40 @@ class ReservationController extends Controller
                     ],
                 ];
 
-                $eventId = $googleCalendarService->createEventForAdmin($user->google_refresh_token, $user->google_calendar_id, $eventData);
+                // Meet URLを生成する場合
+                if ($reservation->calendar->include_meet_url) {
+                    $eventData['conferenceData'] = [
+                        'createRequest' => [
+                            'requestId' => uniqid(),
+                            'conferenceSolutionKey' => [
+                                'type' => 'hangoutsMeet'
+                            ]
+                        ]
+                    ];
+                }
+
+                $eventResponse = $googleCalendarService->createEventForAdmin($user->google_refresh_token, $user->google_calendar_id, $eventData);
                 
-                if ($eventId) {
-                    // イベントIDを保存（更新・削除時に使用）
-                    $reservation->update(['google_event_id' => $eventId]);
+                if ($eventResponse && isset($eventResponse['id'])) {
+                    $eventId = $eventResponse['id'];
+                    $meetUrl = null;
+                    
+                    // Meet URLを取得
+                    if ($reservation->calendar->include_meet_url && isset($eventResponse['conferenceData']['entryPoints'][0]['uri'])) {
+                        $meetUrl = $eventResponse['conferenceData']['entryPoints'][0]['uri'];
+                    }
+                    
+                    $reservation->update([
+                        'google_event_id' => $eventId,
+                        'meet_url' => $meetUrl,
+                    ]);
+                    
                     \Log::info('Google Calendar event created', [
                         'reservation_id' => $reservation->id,
                         'user_id' => $user->id,
                         'event_id' => $eventId,
+                        'meet_url' => $meetUrl,
+                        'event_response' => $eventResponse,
                     ]);
                 }
             }
