@@ -528,7 +528,7 @@ const InflowAnalysis: React.FC = () => {
                   友だち追加時の自動メッセージ設定
                 </Typography>
                 
-                <FormControl fullWidth>
+                <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <input
                       type="checkbox"
@@ -541,7 +541,7 @@ const InflowAnalysis: React.FC = () => {
                       カスタムウェルカムメッセージを有効にする
                     </label>
                   </Box>
-                </FormControl>
+                </Box>
 
                 {formData.enable_welcome_message && (
                   <TextField
