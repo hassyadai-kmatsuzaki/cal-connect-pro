@@ -20,6 +20,11 @@ class LiffController extends Controller
      */
     public function login(Request $request)
     {
+        \Log::info('LIFF login request received', [
+            'request_data' => $request->all(),
+            'tenant_id' => tenant('id'),
+        ]);
+
         $validator = Validator::make($request->all(), [
             'line_user_id' => 'required|string',
             'display_name' => 'required|string',
@@ -28,6 +33,10 @@ class LiffController extends Controller
         ]);
 
         if ($validator->fails()) {
+            \Log::error('LIFF login validation failed', [
+                'errors' => $validator->errors(),
+                'request_data' => $request->all(),
+            ]);
             return response()->json([
                 'message' => 'バリデーションエラー',
                 'errors' => $validator->errors(),
@@ -47,13 +56,24 @@ class LiffController extends Controller
                 ]
             );
 
+            \Log::info('LIFF login successful', [
+                'line_user_id' => $lineUser->line_user_id,
+                'display_name' => $lineUser->display_name,
+                'tenant_id' => tenant('id'),
+            ]);
+
             return response()->json([
                 'data' => $lineUser,
                 'message' => 'ログイン成功',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('LIFF login failed: ' . $e->getMessage());
+            \Log::error('LIFF login failed: ' . $e->getMessage(), [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+                'tenant_id' => tenant('id'),
+            ]);
             
             return response()->json([
                 'message' => 'ログインに失敗しました',

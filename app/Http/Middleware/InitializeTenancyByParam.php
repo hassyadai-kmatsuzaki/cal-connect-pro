@@ -13,7 +13,7 @@ class InitializeTenancyByParam
     {
         $tenantId = $request->route('tenant_id');
         
-        \Log::error('InitializeTenancyByParam middleware called', [
+        \Log::info('InitializeTenancyByParam middleware called', [
             'tenant_id' => $tenantId,
             'url' => $request->url(),
             'method' => $request->method(),

@@ -19,6 +19,9 @@ class LiffController extends Controller
             Log::info('Central LIFF request received', [
                 'tenant_id' => $tenantId,
                 'path' => $request->path(),
+                'method' => $request->method(),
+                'url' => $request->url(),
+                'request_data' => $request->all(),
             ]);
 
             // テナント用LiffControllerに転送
@@ -28,17 +31,25 @@ class LiffController extends Controller
             switch ($request->method()) {
                 case 'POST':
                     if ($request->is('*/login')) {
+                        Log::info('Calling tenant login method');
                         return $tenantLiffController->login($request);
                     } elseif ($request->is('*/reservations')) {
+                        Log::info('Calling tenant createReservation method');
                         return $tenantLiffController->createReservation($request);
                     }
                     break;
                 case 'GET':
                     if ($request->is('*/user')) {
+                        Log::info('Calling tenant getUser method');
                         return $tenantLiffController->getUser($request);
                     }
                     break;
             }
+
+            Log::warning('LIFF endpoint not found', [
+                'path' => $request->path(),
+                'method' => $request->method(),
+            ]);
 
             return response()->json(['message' => 'LIFF endpoint not found'], 404);
 
@@ -46,7 +57,8 @@ class LiffController extends Controller
             Log::error('Central LIFF error: ' . $e->getMessage(), [
                 'tenant_id' => $tenantId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
             ]);
 
             return response()->json(['message' => 'LIFF processing failed'], 500);
