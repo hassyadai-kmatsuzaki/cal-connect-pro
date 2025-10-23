@@ -138,7 +138,7 @@ const InflowAnalysis: React.FC = () => {
       console.error('Failed to fetch sources:', error);
       setSnackbar({
         open: true,
-        message: '流入経路の取得に失敗しました',
+        message: '友だち追加流入経路の取得に失敗しました',
         severity: 'error',
       });
     }
@@ -210,7 +210,7 @@ const InflowAnalysis: React.FC = () => {
     if (!formData.name.trim()) {
       setSnackbar({
         open: true,
-        message: '流入経路名を入力してください',
+        message: '友だち追加流入経路名を入力してください',
         severity: 'error',
       });
       return;
@@ -272,7 +272,7 @@ const InflowAnalysis: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('この流入経路を削除してもよろしいですか？')) {
+    if (!confirm('この友だち追加流入経路を削除してもよろしいですか？')) {
       return;
     }
 
@@ -280,7 +280,7 @@ const InflowAnalysis: React.FC = () => {
       await axios.delete(`/api/inflow-sources/${id}`);
       setSnackbar({
         open: true,
-        message: '流入経路を削除しました',
+        message: '友だち追加流入経路を削除しました',
         severity: 'success',
       });
       await fetchData();
@@ -334,7 +334,7 @@ const InflowAnalysis: React.FC = () => {
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-            流入経路分析
+            友だち追加流入経路管理
           </Typography>
           <Stack direction="row" spacing={2}>
             <Button
@@ -356,8 +356,8 @@ const InflowAnalysis: React.FC = () => {
         </Box>
 
         <Alert severity="info" sx={{ mb: 3 }}>
-          流入経路ごとのURLを発行し、アクセス数やコンバージョン率を分析できます。
-          各SNSや広告媒体ごとに異なるURLを作成して、効果測定にご活用ください。
+          LINE友だち追加時の流入経路を設定し、自動メッセージをカスタマイズできます。
+          各SNSや広告媒体ごとに異なるURLを作成して、友だち追加時の流入元を特定できます。
         </Alert>
 
         {/* 統計サマリー */}
@@ -414,7 +414,7 @@ const InflowAnalysis: React.FC = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Analytics color="info" sx={{ mr: 1 }} />
                     <Typography variant="body2" color="text.secondary">
-                      流入経路数
+                      友だち追加数
                     </Typography>
                   </Box>
                   <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
@@ -434,7 +434,7 @@ const InflowAnalysis: React.FC = () => {
           <Card>
             <CardContent>
               <Alert severity="info">
-                流入経路がまだありません。「新規作成」ボタンから作成してください。
+                友だち追加流入経路がまだありません。「新規作成」ボタンから作成してください。
               </Alert>
             </CardContent>
           </Card>
@@ -447,8 +447,8 @@ const InflowAnalysis: React.FC = () => {
                     <TableRow>
                       <TableCell>流入経路名</TableCell>
                       <TableCell>カレンダー</TableCell>
-                      <TableCell align="center">アクセス数</TableCell>
-                      <TableCell align="center">CV数</TableCell>
+                      <TableCell align="center">友だち追加数</TableCell>
+                      <TableCell align="center">予約数</TableCell>
                       <TableCell align="center">CVR</TableCell>
                       <TableCell align="center">ステータス</TableCell>
                       <TableCell align="right">操作</TableCell>
@@ -533,12 +533,12 @@ const InflowAnalysis: React.FC = () => {
         {/* 作成/編集ダイアログ */}
         <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
           <DialogTitle>
-            {selectedSource ? '流入経路を編集' : '新規流入経路作成'}
+            {selectedSource ? '友だち追加流入経路を編集' : '新規友だち追加流入経路作成'}
           </DialogTitle>
           <DialogContent>
             <Stack spacing={3} sx={{ mt: 2 }}>
               <TextField
-                label="流入経路名"
+                label="友だち追加流入経路名"
                 fullWidth
                 required
                 value={formData.name}

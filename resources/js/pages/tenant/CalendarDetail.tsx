@@ -172,8 +172,9 @@ const CalendarDetail: React.FC = () => {
   const copyBookingUrl = () => {
     if (!calendar) return;
     
-    // TODO: 正確な予約URLを生成する（将来的に実装）
-    const bookingUrl = `${window.location.origin}/book/${calendar.id}`;
+    // 正しいLIFF URLを生成（セントラルドメイン経由）
+    const tenantId = window.location.hostname.split('.')[0]; // サブドメインからテナントIDを取得
+    const bookingUrl = `https://anken.cloud/book/${tenantId}/${calendar.id}`;
     navigator.clipboard.writeText(bookingUrl);
     setSnackbar({
       open: true,
@@ -278,7 +279,7 @@ const CalendarDetail: React.FC = () => {
               }
             >
               <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                予約URL: {window.location.origin}/book/{calendar.id}
+                予約URL: https://anken.cloud/book/{window.location.hostname.split('.')[0]}/{calendar.id}
               </Typography>
             </Alert>
           </Grid>
