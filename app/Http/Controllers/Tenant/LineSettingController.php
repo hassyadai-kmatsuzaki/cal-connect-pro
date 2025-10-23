@@ -38,6 +38,7 @@ class LineSettingController extends Controller
             'channel_secret' => 'required|string|max:255',
             'channel_access_token' => 'required|string',
             'liff_id' => 'nullable|string|max:255',
+            'line_id' => 'nullable|string|max:255',
         ], [
             'channel_id.required' => 'Channel IDは必須です',
             'channel_secret.required' => 'Channel Secretは必須です',
@@ -61,6 +62,7 @@ class LineSettingController extends Controller
                 'channel_secret' => $request->channel_secret,
                 'channel_access_token' => $request->channel_access_token,
                 'liff_id' => $request->liff_id,
+                'line_id' => $request->line_id,
                 'is_connected' => true,
                 'connected_at' => now(),
                 'webhook_url' => $request->getSchemeAndHttpHost() . '/api/line/webhook',
@@ -77,6 +79,7 @@ class LineSettingController extends Controller
                 'channel_secret' => $request->channel_secret,
                 'channel_access_token' => $request->channel_access_token,
                 'liff_id' => $request->liff_id,
+                'line_id' => $request->line_id,
                 'is_connected' => true,
                 'connected_at' => now(),
                 'webhook_url' => $request->getSchemeAndHttpHost() . '/api/line/webhook',

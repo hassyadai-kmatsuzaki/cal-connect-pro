@@ -600,6 +600,12 @@ const InflowAnalysis: React.FC = () => {
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2, wordBreak: 'break-all' }}>
                     {selectedSource.liff_url}
                   </Typography>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      <strong>LIFF URL形式:</strong><br />
+                      https://liff.line.me/{'{LIFF_ID}'}?route=add&source={'{SOURCE_KEY}'}
+                    </Typography>
+                  </Alert>
                   <Button
                     variant="outlined"
                     startIcon={<ContentCopy />}

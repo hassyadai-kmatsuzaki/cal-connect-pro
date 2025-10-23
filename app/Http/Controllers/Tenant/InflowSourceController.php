@@ -89,8 +89,12 @@ class InflowSourceController extends Controller
             // source_keyが指定されていない場合は自動生成
             $sourceKey = $request->source_key ?? Str::random(8);
             
+            // LINE設定からLIFF IDを取得
+            $lineSetting = \App\Models\LineSetting::first();
+            $liffId = $lineSetting?->liff_id ?? '2007665716-GlDK41rD'; // デフォルト値
+            
             // LIFF URLを生成（友だち追加用）
-            $liffUrl = "https://liff.line.me/2007665716-GlDK41rD?route=add&source={$sourceKey}";
+            $liffUrl = "https://liff.line.me/{$liffId}?route=add&source={$sourceKey}";
             
             $source = InflowSource::create([
                 'name' => $request->name,

@@ -30,6 +30,7 @@ interface LineSettingData {
   channel_secret: string;
   channel_access_token: string;
   liff_id?: string;
+  line_id?: string;
   webhook_url?: string;
   is_connected: boolean;
   connected_at?: string;
@@ -45,6 +46,7 @@ const LineSettings: React.FC = () => {
     channelSecret: '',
     accessToken: '',
     liffId: '',
+    lineId: '',
   });
   const [connectedAt, setConnectedAt] = useState<string>('');
   const [botName, setBotName] = useState<string>('');
@@ -71,6 +73,7 @@ const LineSettings: React.FC = () => {
           channelSecret: data.channel_secret || '',
           accessToken: data.channel_access_token || '',
           liffId: data.liff_id || '',
+          lineId: data.line_id || '',
         });
         setIsConnected(data.is_connected || false);
         setConnectedAt(data.connected_at || '');
@@ -140,6 +143,7 @@ const LineSettings: React.FC = () => {
         channel_secret: settings.channelSecret,
         channel_access_token: settings.accessToken,
         liff_id: settings.liffId,
+        line_id: settings.lineId,
       });
 
       setIsConnected(true);
@@ -177,6 +181,7 @@ const LineSettings: React.FC = () => {
         channelSecret: '',
         accessToken: '',
         liffId: '',
+        lineId: '',
       });
       setConnectedAt('');
       setBotName('');
@@ -339,6 +344,17 @@ const LineSettings: React.FC = () => {
                       onChange={(e) => setSettings({ ...settings, liffId: e.target.value })}
                       placeholder="1234567890-abcdefgh"
                       helperText="LIFF アプリを作成済みの場合は入力してください"
+                      disabled={isConnected}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="LINE ID（オプション）"
+                      fullWidth
+                      value={settings.lineId}
+                      onChange={(e) => setSettings({ ...settings, lineId: e.target.value })}
+                      placeholder="@your_line_id"
+                      helperText="LINE公式アカウントのID（@で始まる）を入力してください"
                       disabled={isConnected}
                     />
                   </Grid>
