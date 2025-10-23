@@ -221,14 +221,49 @@ class LiffController extends Controller
                     ],
                 ];
 
+                // Meet URLを生成する場合
+                if ($reservation->calendar->include_meet_url) {
+                    $eventData['conferenceData'] = [
+                        'createRequest' => [
+                            'requestId' => uniqid(),
+                            'conferenceSolutionKey' => [
+                                'type' => 'hangoutsMeet'
+                            ]
+                        ]
+                    ];
+                }
+
                 $eventId = $googleCalendarService->createEventForAdmin($user->google_refresh_token, $user->google_calendar_id, $eventData);
                 
                 if ($eventId) {
-                    $reservation->update(['google_event_id' => $eventId]);
+                    // Meet URLを取得
+                    $meetUrl = null;
+                    if ($reservation->calendar->include_meet_url) {
+                        $googleCalendarService->setUser($user);
+                        $events = $googleCalendarService->getEvents(
+                            $user->google_calendar_id,
+                            Carbon::parse($reservation->reservation_datetime)->toRfc3339String(),
+                            Carbon::parse($reservation->reservation_datetime)->addMinutes($reservation->duration_minutes)->toRfc3339String()
+                        );
+                        
+                        foreach ($events as $event) {
+                            if ($event['id'] === $eventId && isset($event['conferenceData']['entryPoints'][0]['uri'])) {
+                                $meetUrl = $event['conferenceData']['entryPoints'][0]['uri'];
+                                break;
+                            }
+                        }
+                    }
+                    
+                    $reservation->update([
+                        'google_event_id' => $eventId,
+                        'meet_url' => $meetUrl,
+                    ]);
+                    
                     \Log::info('Google Calendar event created for LIFF reservation', [
                         'reservation_id' => $reservation->id,
                         'user_id' => $user->id,
                         'event_id' => $eventId,
+                        'meet_url' => $meetUrl,
                     ]);
                 }
             }
@@ -254,15 +289,23 @@ class LiffController extends Controller
             // カスタムメッセージがある場合は使用、なければデフォルトメッセージ
             if ($calendar->line_reply_message) {
                 $message = $this->buildCustomMessage($calendar->line_reply_message, $reservation);
+                
+                // カスタムメッセージに{{meet_url}}が含まれていない場合のみ追加
+                if ($calendar->include_meet_url && !str_contains($calendar->line_reply_message, '{{meet_url}}')) {
+                    $meetUrl = $this->generateMeetUrl($reservation);
+                    if ($meetUrl) {
+                        $message .= "\n\n📹 ミーティングURL:\n{$meetUrl}";
+                    }
+                }
             } else {
                 $message = $this->buildDefaultMessage($reservation);
-            }
-            
-            // Meet URLを含めるかチェック
-            if ($calendar->include_meet_url) {
-                $meetUrl = $this->generateMeetUrl($reservation);
-                if ($meetUrl) {
-                    $message .= "\n\n📹 ミーティングURL:\n{$meetUrl}";
+                
+                // デフォルトメッセージの場合もMeet URLを追加
+                if ($calendar->include_meet_url) {
+                    $meetUrl = $this->generateMeetUrl($reservation);
+                    if ($meetUrl) {
+                        $message .= "\n\n📹 ミーティングURL:\n{$meetUrl}";
+                    }
                 }
             }
 
@@ -330,6 +373,11 @@ class LiffController extends Controller
     private function generateMeetUrl(Reservation $reservation): ?string
     {
         try {
+            // データベースに保存されたMeet URLを優先的に使用
+            if ($reservation->meet_url) {
+                return $reservation->meet_url;
+            }
+            
             // Google Calendar APIを使用してMeet URLを生成
             $googleCalendarService = new \App\Services\GoogleCalendarService();
             
