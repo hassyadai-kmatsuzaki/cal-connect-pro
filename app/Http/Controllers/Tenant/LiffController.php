@@ -107,7 +107,7 @@ class LiffController extends Controller
             'calendar_id' => 'nullable|exists:calendars,id',
             'reservation_datetime' => 'required|date|after:now',
             'duration_minutes' => 'nullable|integer|min:15',
-            'customer_name' => 'required|string|max:255',
+            'customer_name' => 'nullable|string|max:255',
             'customer_email' => 'nullable|email|max:255',
             'customer_phone' => 'nullable|string|max:50',
             'line_user_id' => 'required|string',
@@ -137,13 +137,23 @@ class LiffController extends Controller
             // デフォルト値を設定
             $calendarId = $request->calendar_id ?: 1; // デフォルトはカレンダーID 1
             $durationMinutes = $request->duration_minutes ?: 60; // デフォルトは60分
+            
+            // カレンダーを取得してヒアリングフォームの有無を確認
+            $calendar = \App\Models\Calendar::find($calendarId);
+            $hasHearingForm = $calendar && $calendar->hearing_form_id;
+            
+            // ヒアリングフォームがない場合はLINE名を使用
+            $customerName = $request->customer_name;
+            if (!$hasHearingForm && !$customerName) {
+                $customerName = $lineUser->display_name ?: 'LINEユーザー';
+            }
 
             $reservation = Reservation::create([
                 'calendar_id' => $calendarId,
                 'line_user_id' => $lineUser->id,
                 'reservation_datetime' => $request->reservation_datetime,
                 'duration_minutes' => $durationMinutes,
-                'customer_name' => $request->customer_name,
+                'customer_name' => $customerName,
                 'customer_email' => $request->customer_email,
                 'customer_phone' => $request->customer_phone,
                 'inflow_source_id' => $request->inflow_source_id,
@@ -578,6 +588,11 @@ class LiffController extends Controller
     private function buildEventDescription(Reservation $reservation): string
     {
         $description = "お客様: {$reservation->customer_name}\n";
+        
+        // LINEユーザー情報を追加
+        if ($reservation->lineUser) {
+            $description .= "LINE名: {$reservation->lineUser->display_name}\n";
+        }
         
         if ($reservation->customer_email) {
             $description .= "メール: {$reservation->customer_email}\n";

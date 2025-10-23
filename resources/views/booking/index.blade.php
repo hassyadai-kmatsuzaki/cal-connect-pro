@@ -998,13 +998,7 @@
 
         // Validate form fields
         function validateForm() {
-            const customerName = document.getElementById('customerName').value.trim();
-            if (!customerName) {
-                showError('お名前を入力してください');
-                return false;
-            }
-            
-            // Validate required hearing form fields
+            // ヒアリングフォームがある場合は必須項目をチェック
             if (hasHearingForm) {
                 const items = calendarData.hearing_form.items;
                 for (const item of items) {
@@ -1017,6 +1011,7 @@
                     }
                 }
             }
+            // ヒアリングフォームがない場合はLINE名で予約（バリデーション不要）
             
             return true;
         }
@@ -1032,28 +1027,14 @@
                         <span class="summary-label">予約日時</span>
                         <span class="summary-value">${dateObj.getMonth() + 1}月${dateObj.getDate()}日(${dayNames[dateObj.getDay()]}) ${selectedSlot.start_time}</span>
                     </div>
-                    <div class="summary-row">
-                        <span class="summary-label">お名前</span>
-                        <span class="summary-value">${document.getElementById('customerName').value}</span>
-                    </div>
             `;
             
-            const email = document.getElementById('customerEmail').value;
-            if (email) {
+            // ヒアリングフォームがない場合はLINE名を表示
+            if (!hasHearingForm) {
                 html += `
                     <div class="summary-row">
-                        <span class="summary-label">メールアドレス</span>
-                        <span class="summary-value">${email}</span>
-                    </div>
-                `;
-            }
-            
-            const phone = document.getElementById('customerPhone').value;
-            if (phone) {
-                html += `
-                    <div class="summary-row">
-                        <span class="summary-label">電話番号</span>
-                        <span class="summary-value">${phone}</span>
+                        <span class="summary-label">お名前</span>
+                        <span class="summary-value">${lineUser?.display_name || 'LINEユーザー'}</span>
                     </div>
                 `;
             }
@@ -1086,9 +1067,11 @@
                 
                 const requestData = {
                     reservation_datetime: selectedSlot.datetime,
-                    customer_name: document.getElementById('customerName').value,
-                    customer_email: document.getElementById('customerEmail').value || null,
-                    customer_phone: document.getElementById('customerPhone').value || null,
+                    customer_name: hasHearingForm ? 
+                        (document.getElementById('customerName')?.value || lineUser?.display_name || 'LINEユーザー') : 
+                        (lineUser?.display_name || 'LINEユーザー'),
+                    customer_email: hasHearingForm ? (document.getElementById('customerEmail')?.value || null) : null,
+                    customer_phone: hasHearingForm ? (document.getElementById('customerPhone')?.value || null) : null,
                     line_user_id: lineUser?.line_user_id,
                 };
                 
