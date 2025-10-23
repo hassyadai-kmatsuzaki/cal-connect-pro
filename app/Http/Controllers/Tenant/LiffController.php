@@ -107,9 +107,6 @@ class LiffController extends Controller
             'calendar_id' => 'nullable|exists:calendars,id',
             'reservation_datetime' => 'required|date|after:now',
             'duration_minutes' => 'nullable|integer|min:15',
-            'customer_name' => 'nullable|string|max:255',
-            'customer_email' => 'nullable|email|max:255',
-            'customer_phone' => 'nullable|string|max:50',
             'line_user_id' => 'required|string',
             'inflow_source_id' => 'nullable|exists:inflow_sources,id',
             'answers' => 'nullable|array',
@@ -143,10 +140,7 @@ class LiffController extends Controller
             $hasHearingForm = $calendar && $calendar->hearing_form_id;
             
             // ヒアリングフォームがない場合はLINE名を使用
-            $customerName = $request->customer_name;
-            if (!$hasHearingForm && !$customerName) {
-                $customerName = $lineUser->display_name ?: 'LINEユーザー';
-            }
+            $customerName = $lineUser->display_name ?: 'LINEユーザー';
 
             $reservation = Reservation::create([
                 'calendar_id' => $calendarId,
@@ -154,8 +148,8 @@ class LiffController extends Controller
                 'reservation_datetime' => $request->reservation_datetime,
                 'duration_minutes' => $durationMinutes,
                 'customer_name' => $customerName,
-                'customer_email' => $request->customer_email,
-                'customer_phone' => $request->customer_phone,
+                'customer_email' => null,
+                'customer_phone' => null,
                 'inflow_source_id' => $request->inflow_source_id,
                 'status' => 'pending', // LIFFからの予約は保留状態
             ]);

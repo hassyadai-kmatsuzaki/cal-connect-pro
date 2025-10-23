@@ -546,21 +546,6 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="customerName">お名前<span class="required">*</span></label>
-                <input type="text" id="customerName" class="form-control" placeholder="山田 太郎">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="customerEmail">メールアドレス</label>
-                <input type="email" id="customerEmail" class="form-control" placeholder="example@example.com">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" for="customerPhone">電話番号</label>
-                <input type="tel" id="customerPhone" class="form-control" placeholder="090-1234-5678">
-            </div>
-
             <div id="hearingFormFields"></div>
 
             <div class="button-group">
@@ -1068,10 +1053,10 @@
                 const requestData = {
                     reservation_datetime: selectedSlot.datetime,
                     customer_name: hasHearingForm ? 
-                        (document.getElementById('customerName')?.value || lineUser?.display_name || 'LINEユーザー') : 
+                        (lineUser?.display_name || 'LINEユーザー') : 
                         (lineUser?.display_name || 'LINEユーザー'),
-                    customer_email: hasHearingForm ? (document.getElementById('customerEmail')?.value || null) : null,
-                    customer_phone: hasHearingForm ? (document.getElementById('customerPhone')?.value || null) : null,
+                    customer_email: null,
+                    customer_phone: null,
                     line_user_id: lineUser?.line_user_id,
                 };
                 
