@@ -647,9 +647,20 @@ class LiffController extends Controller
                         'event_id' => $eventId,
                         'meet_url' => $meetUrl,
                     ]);
+                } else {
+                    \Log::error('Failed to create Google Calendar event for LIFF', [
+                        'reservation_id' => $reservation->id,
+                        'assigned_user_id' => $assignedUser->id,
+                        'event_response' => $eventResponse,
+                    ]);
                 }
+            } else {
+                \Log::error('Failed to create Google Calendar event for LIFF', [
+                    'reservation_id' => $reservation->id,
+                    'assigned_user_id' => $assignedUser->id,
+                    'event_response' => $eventResponse,
+                ]);
             }
-            
         } catch (\Exception $e) {
             \Log::error('Failed to create Google Calendar event for LIFF reservation: ' . $e->getMessage(), [
                 'reservation_id' => $reservation->id,
