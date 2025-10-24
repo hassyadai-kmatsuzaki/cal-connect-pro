@@ -51,6 +51,7 @@ const LineSettings: React.FC = () => {
   const [connectedAt, setConnectedAt] = useState<string>('');
   const [botName, setBotName] = useState<string>('');
   const [webhookUrl, setWebhookUrl] = useState<string>('');
+  const [tenantId, setTenantId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -67,6 +68,11 @@ const LineSettings: React.FC = () => {
       const response = await axios.get('/api/line-settings');
       const data = response.data.data as LineSettingData | null;
       
+      // テナントIDを取得（APIレスポンスから、または現在のURLから）
+      const currentTenantId = data?.webhook_url?.split('/').pop() || 
+                              window.location.hostname.split('.')[0];
+      setTenantId(currentTenantId);
+      
       if (data) {
         setSettings({
           channelId: data.channel_id || '',
@@ -77,13 +83,15 @@ const LineSettings: React.FC = () => {
         });
         setIsConnected(data.is_connected || false);
         setConnectedAt(data.connected_at || '');
-        setWebhookUrl(data.webhook_url || `${window.location.origin}/api/line/webhook`);
+        setWebhookUrl(data.webhook_url || `https://anken.cloud/api/line/webhook/${currentTenantId}`);
       } else {
-        setWebhookUrl(`${window.location.origin}/api/line/webhook`);
+        setWebhookUrl(`https://anken.cloud/api/line/webhook/${currentTenantId}`);
       }
     } catch (error) {
       console.error('LINE設定の取得に失敗:', error);
-      setWebhookUrl(`${window.location.origin}/api/line/webhook`);
+      const fallbackTenantId = window.location.hostname.split('.')[0];
+      setTenantId(fallbackTenantId);
+      setWebhookUrl(`https://anken.cloud/api/line/webhook/${fallbackTenantId}`);
     } finally {
       setLoading(false);
     }
@@ -150,6 +158,12 @@ const LineSettings: React.FC = () => {
       setConnectedAt(response.data.data.connected_at);
       setWebhookUrl(response.data.data.webhook_url);
       
+      // テナントIDを更新
+      const updatedTenantId = response.data.data.webhook_url?.split('/').pop();
+      if (updatedTenantId) {
+        setTenantId(updatedTenantId);
+      }
+      
       setSnackbar({
         open: true,
         message: response.data.message,
@@ -185,6 +199,8 @@ const LineSettings: React.FC = () => {
       });
       setConnectedAt('');
       setBotName('');
+      setWebhookUrl('');
+      setTenantId(null);
       
       setSnackbar({
         open: true,

@@ -32,3 +32,21 @@ export const isTenantContext = (): boolean => {
   return !isCentralDomain();
 };
 
+/**
+ * テナントIDを取得（テナントドメインの場合）
+ */
+export const getTenantId = (): string | null => {
+  if (isCentralDomain()) {
+    return null;
+  }
+  
+  // テナントドメインの場合、サブドメインからテナントIDを推測
+  // または、APIレスポンスから取得する方法もある
+  const hostname = window.location.hostname;
+  const subdomain = hostname.split('.')[0];
+  
+  // 実際のテナントIDは、APIから取得する必要がある
+  // ここでは一時的にサブドメインを使用
+  return subdomain !== 'www' ? subdomain : null;
+};
+

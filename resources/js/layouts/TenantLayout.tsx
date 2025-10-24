@@ -32,6 +32,7 @@ import {
   People,
   LocalOffer,
   Assignment,
+  PersonAdd,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -78,6 +79,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ children }) => {
     { text: '流入経路分析', icon: <TrendingUp />, path: '/inflow-analysis' },
     { text: 'ユーザー管理', icon: <People />, path: '/user-management' },
     { text: 'タグ管理', icon: <LocalOffer />, path: '/tag-management' },
+    { text: 'ユーザー招待', icon: <PersonAdd />, path: '/user-invitations' },
   ];
 
   // User用メニュー

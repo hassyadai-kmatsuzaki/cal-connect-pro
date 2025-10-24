@@ -23,6 +23,8 @@ import Availability from './pages/tenant/Availability';
 import ReservationManagement from './pages/tenant/ReservationManagement';
 import ReservationDetail from './pages/tenant/ReservationDetail';
 import ReservationForm from './pages/tenant/ReservationForm';
+import UserInvitationManagement from './pages/tenant/UserInvitationManagement';
+import InviteAccept from './pages/tenant/InviteAccept';
 
 const App: React.FC = () => {
   const isCentral = isCentralDomain();
@@ -135,6 +137,14 @@ const App: React.FC = () => {
               }
             />
             <Route
+              path="/user-invitations"
+              element={
+                <PrivateRoute>
+                  <UserInvitationManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/reservations/new"
               element={
                 <PrivateRoute>
@@ -184,6 +194,9 @@ const App: React.FC = () => {
                   </PrivateRoute>
               }
             />
+            
+            {/* 招待受信ページ（認証不要） */}
+            <Route path="/invite/:token" element={<InviteAccept />} />
               
         </>
         )}
