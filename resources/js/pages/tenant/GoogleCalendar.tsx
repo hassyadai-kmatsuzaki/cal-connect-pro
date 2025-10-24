@@ -307,26 +307,26 @@ const GoogleCalendarPage: React.FC = () => {
                 
                 {isConnected && calendars.length > 0 ? (
                   <List>
-                    {calendars.map((calendar) => (
-                      <ListItem key={calendar.id} sx={{ px: 0 }}>
-                        <ListItemIcon>
-                          <CalendarMonth 
-                            sx={{ color: calendar.backgroundColor || 'primary.main' }}
-                          />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              {calendar.summary}
-                              {calendar.primary && (
+                    {calendars
+                      .filter((calendar) => calendar.primary)
+                      .map((calendar) => (
+                        <ListItem key={calendar.id} sx={{ px: 0 }}>
+                          <ListItemIcon>
+                            <CalendarMonth 
+                              sx={{ color: calendar.backgroundColor || 'primary.main' }}
+                            />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {calendar.summary}
                                 <Chip label="メイン" size="small" color="primary" />
-                              )}
-                            </Box>
-                          }
-                          secondary={calendar.id}
-                        />
-                      </ListItem>
-                    ))}
+                              </Box>
+                            }
+                            secondary={calendar.id}
+                          />
+                        </ListItem>
+                      ))}
                   </List>
                 ) : (
                   <Alert severity="info">

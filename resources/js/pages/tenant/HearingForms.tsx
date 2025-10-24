@@ -32,6 +32,7 @@ import {
   RadioGroup,
   Divider,
   Stack,
+  Tooltip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,6 +41,7 @@ import {
   DragIndicator,
   Preview,
   Close,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import TenantLayout from '../../layouts/TenantLayout';
 import axios from 'axios';
@@ -62,6 +64,7 @@ interface HearingForm {
   items: FormItem[];
   items_count?: number;
   created_at: string;
+  is_used_in_active_calendar?: boolean;
 }
 
 const HearingForms: React.FC = () => {
@@ -546,17 +549,23 @@ const HearingForms: React.FC = () => {
                       >
                         プレビュー
                       </Button>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={form.is_active}
-                            onChange={() => handleToggleActive(form.id)}
-                            color="primary"
-                          />
-                        }
-                        label=""
-                        sx={{ m: 0 }}
-                      />
+                      <Tooltip 
+                        title={form.is_active && form.is_used_in_active_calendar ? "アクティブなカレンダーで使用中のため無効化できません" : ""}
+                        placement="top"
+                      >
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={form.is_active}
+                              onChange={() => handleToggleActive(form.id)}
+                              color="primary"
+                              disabled={form.is_active && form.is_used_in_active_calendar}
+                            />
+                          }
+                          label=""
+                          sx={{ m: 0 }}
+                        />
+                      </Tooltip>
                     </Box>
                   </CardContent>
                 </Card>

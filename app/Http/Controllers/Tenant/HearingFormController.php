@@ -34,6 +34,11 @@ class HearingFormController extends Controller
         
         $forms = $query->orderBy('created_at', 'desc')->get();
         
+        // 各フォームがカレンダーで使用中かチェック
+        foreach ($forms as $form) {
+            $form->is_used_in_active_calendar = \App\Models\Calendar::where('hearing_form_id', $form->id)->where('is_active', true)->exists();
+        }
+        
         return response()->json([
             'data' => $forms,
         ]);
@@ -272,6 +277,17 @@ class HearingFormController extends Controller
             return response()->json([
                 'message' => 'ヒアリングフォームが見つかりません',
             ], 404);
+        }
+
+        // 無効にしようとする場合、カレンダーで使用中かチェック
+        if ($form->is_active) {
+            $calendarsCount = \App\Models\Calendar::where('hearing_form_id', $id)->where('is_active', true)->count();
+            
+            if ($calendarsCount > 0) {
+                return response()->json([
+                    'message' => "このフォームは{$calendarsCount}個のアクティブなカレンダーで使用されているため、無効にできません",
+                ], 400);
+            }
         }
 
         $form->update([
