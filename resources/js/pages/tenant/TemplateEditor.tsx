@@ -50,6 +50,9 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import TenantLayout from '../../layouts/TenantLayout';
+import FlexMessageEditor from '../../components/FlexMessageEditor';
+import FlowDesigner from '../../components/FlowDesigner';
+import MessagePreview from '../../components/MessagePreview';
 
 interface TemplateStep {
   id: string;
@@ -59,6 +62,25 @@ interface TemplateStep {
   conditions?: any;
   next_steps?: any;
   tag_operations?: any;
+}
+
+interface FlexMessage {
+  type: 'bubble' | 'carousel';
+  header?: any;
+  hero?: any;
+  body?: any;
+  footer?: any;
+  styles?: any;
+}
+
+interface FlowStep {
+  id: string;
+  name: string;
+  type: 'message' | 'condition' | 'action';
+  messageId?: string;
+  condition?: any;
+  action?: any;
+  nextSteps: any[];
 }
 
 interface TemplateVariable {
