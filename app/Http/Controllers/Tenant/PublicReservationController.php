@@ -69,12 +69,28 @@ class PublicReservationController extends Controller
         \Log::info('getAvailableSlots called', [
             'calendar_id' => $calendarId,
             'requested_date' => $request->query('date'),
+            'start_date' => $request->query('start_date'),
+            'end_date' => $request->query('end_date'),
             'request_data' => $request->all(),
         ]);
 
-        $validator = Validator::make($request->all(), [
-            'date' => 'required|date|after_or_equal:today',
-        ]);
+        // 日付範囲の取得（start_date/end_date または date）
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $singleDate = $request->query('date');
+
+        if ($startDate && $endDate) {
+            // 日付範囲での取得
+            $validator = Validator::make($request->all(), [
+                'start_date' => 'required|date|after_or_equal:today',
+                'end_date' => 'required|date|after_or_equal:start_date',
+            ]);
+        } else {
+            // 単一日付での取得
+            $validator = Validator::make($request->all(), [
+                'date' => 'required|date|after_or_equal:today',
+            ]);
+        }
 
         if ($validator->fails()) {
             return response()->json([
@@ -92,68 +108,13 @@ class PublicReservationController extends Controller
         }
 
         try {
-            $date = Carbon::parse($request->date);
-            $dayOfWeek = $this->getDayOfWeekJapanese($date);
-            
-            // カレンダーの受付曜日をチェック（accept_daysはモデルで配列にキャストされています）
-            $acceptDays = $calendar->accept_days ?? [];
-            if (!empty($acceptDays) && !in_array($dayOfWeek, $acceptDays)) {
-                return response()->json([
-                    'data' => [],
-                    'message' => 'この日は予約を受け付けていません',
-                ]);
-            }
-            
-            // 何日先まで受け付けるかチェック
-            $maxDaysInAdvance = $calendar->days_in_advance ?? 30;
-            $daysFromToday = $date->diffInDays(Carbon::today(), false);
-            if ($daysFromToday > $maxDaysInAdvance) {
-                return response()->json([
-                    'data' => [],
-                    'message' => "{$maxDaysInAdvance}日先までの予約のみ受け付けています",
-                ]);
-            }
-            
-            // 当日の何時間後から受け付けるかチェック
-            $minHoursBeforeBooking = $calendar->min_hours_before_booking ?? 0;
-            if ($date->isToday()) {
-                $minBookingTime = Carbon::now()->addHours($minHoursBeforeBooking);
+            if ($startDate && $endDate) {
+                // 日付範囲での取得
+                return $this->getAvailableSlotsForDateRange($calendar, $startDate, $endDate);
             } else {
-                $minBookingTime = $date->copy()->setTime(0, 0);
+                // 単一日付での取得
+                return $this->getAvailableSlotsForSingleDate($calendar, $singleDate);
             }
-            
-            // 時間枠を生成（デフォルト値を設定）
-            $startTime = Carbon::parse($date->format('Y-m-d') . ' ' . ($calendar->start_time ?? '09:00'));
-            $endTime = Carbon::parse($date->format('Y-m-d') . ' ' . ($calendar->end_time ?? '18:00'));
-            $intervalMinutes = $calendar->display_interval ?? 30;
-            $durationMinutes = $calendar->event_duration ?? 60;
-            
-            $timeSlots = [];
-            $currentTime = $startTime->copy();
-            
-            // 基本の時間枠を生成
-            while ($currentTime->copy()->addMinutes($durationMinutes)->lte($endTime)) {
-                // 最小予約時間より後かチェック
-                if ($currentTime->gte($minBookingTime)) {
-                    $slotEnd = $currentTime->copy()->addMinutes($durationMinutes);
-                    
-                    $timeSlots[] = [
-                        'start_time' => $currentTime->format('H:i'),
-                        'end_time' => $slotEnd->format('H:i'),
-                        'datetime' => $currentTime->format('Y-m-d H:i:s'),
-                        'duration_minutes' => $durationMinutes,
-                    ];
-                }
-                
-                $currentTime->addMinutes($intervalMinutes);
-            }
-            
-            // Google Calendar連携ユーザーを取得して実際の空き枠をチェック
-            $slots = $this->getActualAvailability($calendar, $timeSlots);
-            
-            return response()->json([
-                'data' => $slots,
-            ]);
             
         } catch (\Exception $e) {
             \Log::error('Failed to get available slots: ' . $e->getMessage());
@@ -164,6 +125,105 @@ class PublicReservationController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * 日付範囲での空き枠取得
+     */
+    private function getAvailableSlotsForDateRange(Calendar $calendar, string $startDate, string $endDate)
+    {
+        $start = Carbon::parse($startDate);
+        $end = Carbon::parse($endDate);
+        $allSlots = [];
+        
+        // 各日付に対して空き枠を取得
+        $currentDate = $start->copy();
+        while ($currentDate->lte($end)) {
+            $daySlots = $this->getAvailableSlotsForSingleDate($calendar, $currentDate->format('Y-m-d'));
+            
+            if ($daySlots->getStatusCode() === 200) {
+                $dayData = json_decode($daySlots->getContent(), true);
+                if (isset($dayData['data']) && is_array($dayData['data'])) {
+                    $allSlots = array_merge($allSlots, $dayData['data']);
+                }
+            }
+            
+            $currentDate->addDay();
+        }
+        
+        return response()->json([
+            'success' => true,
+            'slots' => $allSlots,
+        ]);
+    }
+
+    /**
+     * 単一日付での空き枠取得
+     */
+    private function getAvailableSlotsForSingleDate(Calendar $calendar, string $date)
+    {
+        $dateObj = Carbon::parse($date);
+        $dayOfWeek = $this->getDayOfWeekJapanese($dateObj);
+        
+        // カレンダーの受付曜日をチェック
+        $acceptDays = $calendar->accept_days ?? [];
+        if (!empty($acceptDays) && !in_array($dayOfWeek, $acceptDays)) {
+            return response()->json([
+                'data' => [],
+                'message' => 'この日は予約を受け付けていません',
+            ]);
+        }
+        
+        // 何日先まで受け付けるかチェック
+        $maxDaysInAdvance = $calendar->days_in_advance ?? 30;
+        $daysFromToday = $dateObj->diffInDays(Carbon::today(), false);
+        if ($daysFromToday > $maxDaysInAdvance) {
+            return response()->json([
+                'data' => [],
+                'message' => "{$maxDaysInAdvance}日先までの予約のみ受け付けています",
+            ]);
+        }
+        
+        // 当日の何時間後から受け付けるかチェック
+        $minHoursBeforeBooking = $calendar->min_hours_before_booking ?? 0;
+        if ($dateObj->isToday()) {
+            $minBookingTime = Carbon::now()->addHours($minHoursBeforeBooking);
+        } else {
+            $minBookingTime = $dateObj->copy()->setTime(0, 0);
+        }
+        
+        // 時間枠を生成
+        $startTime = Carbon::parse($dateObj->format('Y-m-d') . ' ' . ($calendar->start_time ?? '09:00'));
+        $endTime = Carbon::parse($dateObj->format('Y-m-d') . ' ' . ($calendar->end_time ?? '18:00'));
+        $intervalMinutes = $calendar->display_interval ?? 30;
+        $durationMinutes = $calendar->event_duration ?? 60;
+        
+        $timeSlots = [];
+        $currentTime = $startTime->copy();
+        
+        // 基本の時間枠を生成
+        while ($currentTime->copy()->addMinutes($durationMinutes)->lte($endTime)) {
+            // 最小予約時間より後かチェック
+            if ($currentTime->gte($minBookingTime)) {
+                $slotEnd = $currentTime->copy()->addMinutes($durationMinutes);
+                
+                $timeSlots[] = [
+                    'start_time' => $currentTime->format('H:i'),
+                    'end_time' => $slotEnd->format('H:i'),
+                    'datetime' => $currentTime->format('Y-m-d H:i:s'),
+                    'duration_minutes' => $durationMinutes,
+                ];
+            }
+            
+            $currentTime->addMinutes($intervalMinutes);
+        }
+        
+        // Google Calendar連携ユーザーを取得して実際の空き枠をチェック
+        $slots = $this->getActualAvailability($calendar, $timeSlots);
+        
+        return response()->json([
+            'data' => $slots,
+        ]);
     }
 
     /**
