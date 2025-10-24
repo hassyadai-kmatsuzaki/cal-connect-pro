@@ -27,11 +27,11 @@
     <div id="root"></div>
     
     <script>
-        const invitationData = @json([
+        const invitationData = {!! json_encode([
             'invitation' => $invitation,
             'tenantName' => $tenantName,
             'token' => $token,
-        ]);
+        ]) !!};
         
         const { useState, useEffect } = React;
         const { 

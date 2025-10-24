@@ -695,6 +695,14 @@
             document.getElementById('calendarDescription').textContent = calendarData.description || '';
         }
 
+        // 日付カードのスクロール位置をリセット
+        function resetDateCardsScroll() {
+            const dateCards = document.getElementById('dateCards');
+            if (dateCards) {
+                dateCards.scrollLeft = 0;
+            }
+        }
+
         // Setup event listeners
         function setupEventListeners() {
             document.getElementById('prevWeek').addEventListener('click', () => {
@@ -702,6 +710,8 @@
                 loadWeekSlots();
                 // 日付移動時にスクロール位置をリセット
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                // 日付カードのスクロール位置をリセット
+                resetDateCardsScroll();
             });
 
             document.getElementById('nextWeek').addEventListener('click', () => {
@@ -709,6 +719,8 @@
                 loadWeekSlots();
                 // 日付移動時にスクロール位置をリセット
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                // 日付カードのスクロール位置をリセット
+                resetDateCardsScroll();
             });
 
             document.getElementById('backToCalendar').addEventListener('click', () => {
