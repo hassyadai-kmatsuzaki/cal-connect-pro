@@ -65,7 +65,7 @@ class LineSettingController extends Controller
                 'line_id' => $request->line_id,
                 'is_connected' => true,
                 'connected_at' => now(),
-                'webhook_url' => $request->getSchemeAndHttpHost() . '/api/line/webhook/' . tenant('id'),
+                'webhook_url' => 'https://anken.cloud/api/line/webhook/' . tenant('id'),
             ]);
             
             return response()->json([
@@ -82,7 +82,7 @@ class LineSettingController extends Controller
                 'line_id' => $request->line_id,
                 'is_connected' => true,
                 'connected_at' => now(),
-                'webhook_url' => $request->getSchemeAndHttpHost() . '/api/line/webhook/' . tenant('id'),
+                'webhook_url' => 'https://anken.cloud/api/line/webhook/' . tenant('id'),
             ]);
             
             return response()->json([

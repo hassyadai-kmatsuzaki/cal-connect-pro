@@ -16,6 +16,9 @@ Route::get('/sanctum/csrf-cookie', function () {
 // Google Calendar OAuth コールバック（中央ドメイン）
 Route::get('/api/google-calendar/callback', [GoogleCalendarCallbackController::class, 'handleCallback']);
 
+// LINE Webhook（中央ドメイン）
+Route::post('/api/line/webhook/{tenant_id}', [WebhookController::class, 'handle']);
+
 // セントラルドメイン経由のLIFF ページ（テナントIDパラメーターでテナントを特定）
 Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group(function () {
     // LIFF用のページ

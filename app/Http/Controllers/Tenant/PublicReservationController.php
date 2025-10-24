@@ -106,7 +106,8 @@ class PublicReservationController extends Controller
             
             // 何日先まで受け付けるかチェック
             $maxDaysInAdvance = $calendar->days_in_advance ?? 30;
-            if ($date->diffInDays(Carbon::today()) > $maxDaysInAdvance) {
+            $daysFromToday = $date->diffInDays(Carbon::today(), false);
+            if ($daysFromToday > $maxDaysInAdvance) {
                 return response()->json([
                     'data' => [],
                     'message' => "{$maxDaysInAdvance}日先までの予約のみ受け付けています",

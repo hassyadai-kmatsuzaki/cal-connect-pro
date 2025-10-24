@@ -700,11 +700,15 @@
             document.getElementById('prevWeek').addEventListener('click', () => {
                 currentStartDate.setDate(currentStartDate.getDate() - 7);
                 loadWeekSlots();
+                // 日付移動時にスクロール位置をリセット
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             });
 
             document.getElementById('nextWeek').addEventListener('click', () => {
                 currentStartDate.setDate(currentStartDate.getDate() + 7);
                 loadWeekSlots();
+                // 日付移動時にスクロール位置をリセット
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             });
 
             document.getElementById('backToCalendar').addEventListener('click', () => {
