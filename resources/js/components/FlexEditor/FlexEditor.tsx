@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -16,6 +16,10 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Switch,
+  FormControlLabel,
+  Slider,
+  Chip,
   Alert,
   Snackbar
 } from '@mui/material';
@@ -24,7 +28,7 @@ import {
   Preview as PreviewIcon,
   Undo as UndoIcon,
   Redo as RedoIcon,
-  ContentCopy as CopyIcon,
+  Copy as CopyIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   Settings as SettingsIcon,
@@ -51,7 +55,9 @@ import {
 import ComponentPalette from './ComponentPalette';
 import FlexCanvas from './FlexCanvas';
 import PropertyPanel from './PropertyPanel';
+import LayerPanel from './LayerPanel';
 import FlexPreview from '../FlexPreview/FlexPreview';
+import { mockFlexTemplates } from '../../utils/mockData';
 
 interface FlexEditorProps {
   initialData?: FlexMessage;
@@ -66,13 +72,7 @@ const FlexEditor: React.FC<FlexEditorProps> = ({
 }) => {
   // エディタの状態管理
   const [flexMessage, setFlexMessage] = useState<FlexMessage>(
-    initialData ? {
-      ...initialData,
-      body: initialData.body ? addComponentId(initialData.body) : undefined
-    } : {
-      ...createDefaultFlexMessage(),
-      body: addComponentId(createDefaultFlexMessage().body!)
-    }
+    initialData || createDefaultFlexMessage()
   );
   const [selectedComponent, setSelectedComponent] = useState<string | undefined>();
   const [editorState, setEditorState] = useState<FlexEditorState>({
@@ -89,6 +89,7 @@ const FlexEditor: React.FC<FlexEditorProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [showCodeEditor, setShowCodeEditor] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [codeEditorValue, setCodeEditorValue] = useState('');
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -116,14 +117,8 @@ const FlexEditor: React.FC<FlexEditorProps> = ({
 
   // Flexメッセージの更新
   const updateFlexMessage = useCallback((newMessage: FlexMessage) => {
-    // コンポーネントにIDを付与
-    const messageWithIds = addComponentId(newMessage.body!);
-    const messageToSave = {
-      ...newMessage,
-      body: messageWithIds
-    };
-    setFlexMessage(messageToSave);
-    addToHistory(messageToSave);
+    setFlexMessage(newMessage);
+    addToHistory(newMessage);
   }, [addToHistory]);
 
   // コンポーネントの選択
@@ -140,28 +135,54 @@ const FlexEditor: React.FC<FlexEditorProps> = ({
     const newComponent = addComponentId(component);
     let newMessage: FlexMessage;
 
-    if (parentId) {
+    if (parentId && parentId !== 'root') {
       // 指定された親コンポーネントに追加
-      const updatedBody = addComponentToParent(
-        flexMessage.body!,
-        parentId,
-        newComponent,
-        'inside'
-      );
-      newMessage = {
-        ...flexMessage,
-        body: updatedBody
-      };
+      if (flexMessage.body) {
+        const updatedBody = addComponentToParent(
+          flexMessage.body,
+          parentId,
+          newComponent,
+          'inside'
+        );
+        newMessage = {
+          ...flexMessage,
+          body: updatedBody
+        };
+      } else {
+        // bodyが存在しない場合は新しく作成
+        newMessage = {
+          ...flexMessage,
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [newComponent],
+            id: `body_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          }
+        };
+      }
     } else {
       // bodyのcontentsに追加
-      const updatedBody = {
-        ...flexMessage.body!,
-        contents: [...(flexMessage.body?.contents || []), newComponent]
-      };
-      newMessage = {
-        ...flexMessage,
-        body: updatedBody
-      };
+      if (flexMessage.body) {
+        const updatedBody = {
+          ...flexMessage.body,
+          contents: [...(flexMessage.body.contents || []), newComponent]
+        };
+        newMessage = {
+          ...flexMessage,
+          body: updatedBody
+        };
+      } else {
+        // bodyが存在しない場合は新しく作成
+        newMessage = {
+          ...flexMessage,
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [newComponent],
+            id: `body_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          }
+        };
+      }
     }
 
     updateFlexMessage(newMessage);
@@ -432,7 +453,18 @@ const FlexEditor: React.FC<FlexEditorProps> = ({
                   onDeleteComponent={handleDeleteComponent}
                   onCopyComponent={handleCopyComponent}
                   onPasteComponent={handlePasteComponent}
+                  onAddComponent={handleAddComponent}
                   clipboard={editorState.clipboard}
+                />
+              </Box>
+
+              {/* レイヤーパネル */}
+              <Box sx={{ width: 280, borderLeft: 1, borderColor: 'divider' }}>
+                <LayerPanel
+                  flexMessage={flexMessage}
+                  selectedComponent={selectedComponent}
+                  onSelectComponent={handleSelectComponent}
+                  onDeleteComponent={handleDeleteComponent}
                 />
               </Box>
 

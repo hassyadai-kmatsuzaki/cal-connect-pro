@@ -80,6 +80,7 @@ const PropertyPanel: React.FC<PropertyPanelProps> = ({
   const handleSave = useCallback(() => {
     if (selectedComponent && Object.keys(tempValues).length > 0) {
       onUpdateComponent(selectedComponent, tempValues);
+      setTempValues({});
     }
   }, [selectedComponent, tempValues, onUpdateComponent]);
 

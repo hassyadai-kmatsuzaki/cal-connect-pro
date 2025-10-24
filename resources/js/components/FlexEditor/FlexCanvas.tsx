@@ -3,14 +3,18 @@ import {
   Box,
   Paper,
   Typography,
+  IconButton,
+  Tooltip,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
   Divider,
-  Chip
+  Chip,
+  Alert
 } from '@mui/material';
 import {
+  MoreVert as MoreVertIcon,
   ContentCopy as CopyIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -36,6 +40,7 @@ interface FlexCanvasProps {
   onDeleteComponent: (componentId: string) => void;
   onCopyComponent: (componentId: string) => void;
   onPasteComponent: (parentId?: string) => void;
+  onAddComponent: (component: FlexComponent, parentId?: string) => void;
   clipboard?: FlexComponent;
 }
 
@@ -47,6 +52,7 @@ const FlexCanvas: React.FC<FlexCanvasProps> = ({
   onDeleteComponent,
   onCopyComponent,
   onPasteComponent,
+  onAddComponent,
   clipboard
 }) => {
   const [contextMenu, setContextMenu] = useState<{
@@ -61,7 +67,13 @@ const FlexCanvas: React.FC<FlexCanvasProps> = ({
     drop: (item: DragItem, monitor) => {
       if (!monitor.didDrop()) {
         // キャンバスに直接ドロップされた場合
-        onPasteComponent();
+        if (item.component) {
+          // ComponentPaletteからドラッグされた場合
+          onAddComponent(item.component);
+        } else if (clipboard) {
+          // クリップボードからペーストされた場合
+          onPasteComponent();
+        }
       }
     },
     collect: (monitor) => ({
@@ -215,11 +227,12 @@ const FlexCanvas: React.FC<FlexCanvasProps> = ({
                 onContextMenu={(e) => handleContextMenu(e, data.header?.id)}
                 onClick={(e) => data.header?.id && handleComponentClick(e, data.header.id)}
               >
-                <FlexComponentRenderer
-                  component={data.header}
-                  isSelected={selectedComponent === data.header.id}
-                  onUpdate={(updates) => data.header?.id && onUpdateComponent(data.header.id, updates)}
-                />
+                      <FlexComponentRenderer
+                        component={data.header}
+                        isSelected={selectedComponent === data.header.id}
+                        onUpdate={(updates) => data.header?.id && onUpdateComponent(data.header.id, updates)}
+                        onAddChild={(component) => onAddComponent(component, data.header.id)}
+                      />
               </Box>
             )}
 
@@ -229,11 +242,12 @@ const FlexCanvas: React.FC<FlexCanvasProps> = ({
                 onContextMenu={(e) => handleContextMenu(e, data.hero?.id)}
                 onClick={(e) => data.hero?.id && handleComponentClick(e, data.hero.id)}
               >
-                <FlexComponentRenderer
-                  component={data.hero}
-                  isSelected={selectedComponent === data.hero.id}
-                  onUpdate={(updates) => data.hero?.id && onUpdateComponent(data.hero.id, updates)}
-                />
+                      <FlexComponentRenderer
+                        component={data.hero}
+                        isSelected={selectedComponent === data.hero.id}
+                        onUpdate={(updates) => data.hero?.id && onUpdateComponent(data.hero.id, updates)}
+                        onAddChild={(component) => onAddComponent(component, data.hero.id)}
+                      />
               </Box>
             )}
 
@@ -246,12 +260,12 @@ const FlexCanvas: React.FC<FlexCanvasProps> = ({
                 onContextMenu={(e) => handleContextMenu(e, data.body?.id)}
                 onClick={(e) => data.body?.id && handleComponentClick(e, data.body.id)}
               >
-                <FlexComponentRenderer
-                  component={data.body}
-                  isSelected={selectedComponent === data.body.id}
-                  onUpdate={(updates) => data.body?.id && onUpdateComponent(data.body.id, updates)}
-                  onSelect={onSelectComponent}
-                />
+                      <FlexComponentRenderer
+                        component={data.body}
+                        isSelected={selectedComponent === data.body.id}
+                        onUpdate={(updates) => data.body?.id && onUpdateComponent(data.body.id, updates)}
+                        onAddChild={(component) => onAddComponent(component, data.body.id)}
+                      />
               </Box>
             )}
 
@@ -266,11 +280,12 @@ const FlexCanvas: React.FC<FlexCanvasProps> = ({
                 onContextMenu={(e) => handleContextMenu(e, data.footer?.id)}
                 onClick={(e) => data.footer?.id && handleComponentClick(e, data.footer.id)}
               >
-                <FlexComponentRenderer
-                  component={data.footer}
-                  isSelected={selectedComponent === data.footer.id}
-                  onUpdate={(updates) => data.footer?.id && onUpdateComponent(data.footer.id, updates)}
-                />
+                      <FlexComponentRenderer
+                        component={data.footer}
+                        isSelected={selectedComponent === data.footer.id}
+                        onUpdate={(updates) => data.footer?.id && onUpdateComponent(data.footer.id, updates)}
+                        onAddChild={(component) => onAddComponent(component, data.footer.id)}
+                      />
               </Box>
             )}
           </Box>
