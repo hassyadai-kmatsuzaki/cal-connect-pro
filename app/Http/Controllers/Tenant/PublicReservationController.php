@@ -167,6 +167,146 @@ class PublicReservationController extends Controller
     }
 
     /**
+     * 指定された時間枠で空いているユーザーを取得
+     */
+    private function getAvailableUsersForSlot(Calendar $calendar, string $datetime, int $durationMinutes)
+    {
+        $googleCalendarService = new GoogleCalendarService();
+        
+        // カレンダー設定で指定されたGoogle Calendar連携ユーザーを取得
+        $connectedUsers = $calendar->users()
+            ->where('google_calendar_connected', true)
+            ->whereNotNull('google_refresh_token')
+            ->whereNotNull('google_calendar_id')
+            ->get();
+
+        if ($connectedUsers->isEmpty()) {
+            \Log::info('No Google Calendar connected users found for calendar', [
+                'calendar_id' => $calendar->id,
+            ]);
+            return collect();
+        }
+
+        $availableUsers = collect();
+        $slotStart = Carbon::parse($datetime);
+        $slotEnd = $slotStart->copy()->addMinutes($durationMinutes);
+        
+        \Log::info('Checking user availability for slot', [
+            'calendar_id' => $calendar->id,
+            'slot_datetime' => $datetime,
+            'slot_start' => $slotStart->format('Y-m-d H:i:s'),
+            'slot_end' => $slotEnd->format('Y-m-d H:i:s'),
+            'duration_minutes' => $durationMinutes,
+        ]);
+
+        foreach ($connectedUsers as $user) {
+            try {
+                // このユーザーのイベントを取得
+                $userEvents = $googleCalendarService->getEventsForDateRange(
+                    $user->google_refresh_token,
+                    $user->google_calendar_id,
+                    $slotStart->copy()->startOfDay(),
+                    $slotStart->copy()->endOfDay()
+                );
+                
+                \Log::info('Retrieved events for user availability check', [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'events_count' => count($userEvents),
+                ]);
+                
+                // 時間重複をチェック
+                $hasConflict = false;
+                foreach ($userEvents as $event) {
+                    $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
+                    $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
+                    
+                    // 同じ日付のイベントのみチェック
+                    if ($slotStart->format('Y-m-d') !== $eventStart->format('Y-m-d')) {
+                        continue;
+                    }
+                    
+                    // 時間が重複しているかチェック
+                    if ($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd)) {
+                        // 重複なし
+                        continue;
+                    } else {
+                        // 重複あり
+                        $hasConflict = true;
+                        \Log::info('User has conflict for slot', [
+                            'user_id' => $user->id,
+                            'user_name' => $user->name,
+                            'slot_datetime' => $datetime,
+                            'event_summary' => $event['summary'] ?? 'No title',
+                            'event_start' => $eventStart->format('Y-m-d H:i:s'),
+                            'event_end' => $eventEnd->format('Y-m-d H:i:s'),
+                        ]);
+                        break;
+                    }
+                }
+                
+                // このユーザーが空いている場合
+                if (!$hasConflict) {
+                    $availableUsers->push($user);
+                    \Log::info('User is available for slot', [
+                        'user_id' => $user->id,
+                        'user_name' => $user->name,
+                        'slot_datetime' => $datetime,
+                    ]);
+                }
+                
+            } catch (\Exception $e) {
+                \Log::error('Failed to check user availability: ' . $e->getMessage(), [
+                    'user_id' => $user->id,
+                    'slot_datetime' => $datetime,
+                ]);
+                // エラーの場合はこのユーザーをスキップ
+                continue;
+            }
+        }
+
+        \Log::info('Available users for slot', [
+            'slot_datetime' => $datetime,
+            'available_users_count' => $availableUsers->count(),
+            'available_users' => $availableUsers->map(function($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ];
+            }),
+        ]);
+
+        return $availableUsers;
+    }
+
+    /**
+     * 空いているユーザーからランダムに1人を選択
+     */
+    private function selectRandomAvailableUser($availableUsers)
+    {
+        if ($availableUsers->isEmpty()) {
+            return null;
+        }
+        
+        if ($availableUsers->count() === 1) {
+            return $availableUsers->first();
+        }
+        
+        // 複数の場合はランダムに選択
+        $randomIndex = rand(0, $availableUsers->count() - 1);
+        $selectedUser = $availableUsers->get($randomIndex);
+        
+        \Log::info('Random user selected', [
+            'selected_user_id' => $selectedUser->id,
+            'selected_user_name' => $selectedUser->name,
+            'total_available_users' => $availableUsers->count(),
+        ]);
+        
+        return $selectedUser;
+    }
+
+    /**
      * 実際の空き枠を取得（Google Calendar連携）
      */
     private function getActualAvailability(Calendar $calendar, array $timeSlots)
@@ -378,15 +518,23 @@ class PublicReservationController extends Controller
      */
     private function createGoogleCalendarEvent(Reservation $reservation, Calendar $calendar)
     {
-        // カレンダー設定で指定されたGoogle Calendar連携ユーザーを取得
-        $connectedUsers = $calendar->users()
-            ->where('google_calendar_connected', true)
-            ->whereNotNull('google_refresh_token')
-            ->whereNotNull('google_calendar_id')
-            ->get();
-
-        if ($connectedUsers->isEmpty()) {
-            \Log::info('No Google Calendar connected users found for calendar ' . $calendar->id);
+        // アサインされたユーザーを取得
+        $assignedUser = $reservation->assignedUser;
+        
+        if (!$assignedUser) {
+            \Log::warning('No assigned user found for reservation', [
+                'reservation_id' => $reservation->id,
+                'calendar_id' => $calendar->id,
+            ]);
+            return;
+        }
+        
+        if (!$assignedUser->google_calendar_connected || !$assignedUser->google_refresh_token || !$assignedUser->google_calendar_id) {
+            \Log::warning('Assigned user does not have Google Calendar connected', [
+                'reservation_id' => $reservation->id,
+                'assigned_user_id' => $assignedUser->id,
+                'assigned_user_name' => $assignedUser->name,
+            ]);
             return;
         }
 
@@ -396,6 +544,7 @@ class PublicReservationController extends Controller
 
         // イベントの説明を作成
         $description = "予約者: {$reservation->customer_name}\n";
+        $description .= "担当者: {$assignedUser->name}\n";
         if ($reservation->customer_email) {
             $description .= "メール: {$reservation->customer_email}\n";
         }
@@ -424,45 +573,43 @@ class PublicReservationController extends Controller
             $eventData['meet_url'] = true;
         }
 
-        // カレンダー設定で指定されたユーザーのGoogle Calendarにイベントを作成
-        foreach ($connectedUsers as $user) {
-            try {
-                $result = $googleCalendarService->createEventForPublic(
-                    $user->google_refresh_token,
-                    $user->google_calendar_id, // ユーザーのメインカレンダーID
-                    $eventData
-                );
+        // アサインされたユーザーのGoogle Calendarにイベントを作成
+        try {
+            $result = $googleCalendarService->createEventForPublic(
+                $assignedUser->google_refresh_token,
+                $assignedUser->google_calendar_id,
+                $eventData
+            );
 
-                if ($result['success']) {
-                    // 最初の成功したイベントのIDとMeet URLを保存
-                    if (!$reservation->google_event_id) {
-                        $reservation->update([
-                            'google_event_id' => $result['event_id'],
-                            'meet_url' => $result['meet_url'],
-                        ]);
-                    }
-                    \Log::info('Google Calendar event created successfully', [
-                        'reservation_id' => $reservation->id,
-                        'user_id' => $user->id,
-                        'calendar_id' => $calendar->id,
-                        'event_id' => $result['event_id'],
-                    ]);
-                } else {
-                    \Log::error('Failed to create Google Calendar event', [
-                        'reservation_id' => $reservation->id,
-                        'user_id' => $user->id,
-                        'calendar_id' => $calendar->id,
-                        'error' => $result['error'],
-                    ]);
-                }
-            } catch (\Exception $e) {
-                \Log::error('Exception creating Google Calendar event', [
+            if ($result['success']) {
+                $reservation->update([
+                    'google_event_id' => $result['event_id'],
+                    'meet_url' => $result['meet_url'],
+                ]);
+                
+                \Log::info('Google Calendar event created successfully', [
                     'reservation_id' => $reservation->id,
-                    'user_id' => $user->id,
+                    'assigned_user_id' => $assignedUser->id,
+                    'assigned_user_name' => $assignedUser->name,
                     'calendar_id' => $calendar->id,
-                    'error' => $e->getMessage(),
+                    'event_id' => $result['event_id'],
+                    'meet_url' => $result['meet_url'],
+                ]);
+            } else {
+                \Log::error('Failed to create Google Calendar event', [
+                    'reservation_id' => $reservation->id,
+                    'assigned_user_id' => $assignedUser->id,
+                    'calendar_id' => $calendar->id,
+                    'error' => $result['error'],
                 ]);
             }
+        } catch (\Exception $e) {
+            \Log::error('Exception creating Google Calendar event', [
+                'reservation_id' => $reservation->id,
+                'assigned_user_id' => $assignedUser->id,
+                'calendar_id' => $calendar->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -517,9 +664,37 @@ class PublicReservationController extends Controller
                 }
             }
             
+            // 指定された時間枠で空いているユーザーを取得
+            $availableUsers = $this->getAvailableUsersForSlot(
+                $calendar, 
+                $request->reservation_datetime, 
+                $calendar->event_duration ?? 60
+            );
+            
+            // 空いているユーザーからランダムに1人を選択
+            $assignedUser = $this->selectRandomAvailableUser($availableUsers);
+            
+            if (!$assignedUser) {
+                \Log::warning('No available users found for reservation', [
+                    'calendar_id' => $calendarId,
+                    'reservation_datetime' => $request->reservation_datetime,
+                ]);
+                
+                return response()->json([
+                    'message' => 'この時間枠は既に予約が埋まっています',
+                ], 409);
+            }
+            
+            \Log::info('User assigned to reservation', [
+                'assigned_user_id' => $assignedUser->id,
+                'assigned_user_name' => $assignedUser->name,
+                'reservation_datetime' => $request->reservation_datetime,
+            ]);
+            
             $reservation = Reservation::create([
                 'calendar_id' => $calendarId,
                 'inflow_source_id' => $inflowSourceId,
+                'assigned_user_id' => $assignedUser->id,
                 'reservation_datetime' => $request->reservation_datetime,
                 'duration_minutes' => $calendar->event_duration ?? 60,
                 'customer_name' => $request->customer_name,
