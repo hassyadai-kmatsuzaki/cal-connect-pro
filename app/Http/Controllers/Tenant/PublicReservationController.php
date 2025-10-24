@@ -81,13 +81,13 @@ class PublicReservationController extends Controller
 
         if ($startDate && $endDate) {
             // 日付範囲での取得
-            $validator = Validator::make($request->all(), [
+            $validator = Validator::make($request->query(), [
                 'start_date' => 'required|date|after_or_equal:today',
                 'end_date' => 'required|date|after_or_equal:start_date',
             ]);
         } else {
             // 単一日付での取得
-            $validator = Validator::make($request->all(), [
+            $validator = Validator::make($request->query(), [
                 'date' => 'required|date|after_or_equal:today',
             ]);
         }
