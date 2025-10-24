@@ -151,8 +151,6 @@ class LiffController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Failed to get line setting: ' . $e->getMessage());
-            
             return response()->json([
                 'message' => 'LINE設定の取得に失敗しました',
                 'error' => $e->getMessage(),
@@ -187,8 +185,6 @@ class LiffController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Failed to get LIFF user: ' . $e->getMessage());
-            
             return response()->json([
                 'message' => 'ユーザー情報の取得に失敗しました',
                 'error' => $e->getMessage(),
@@ -251,21 +247,10 @@ class LiffController extends Controller
             $assignedUser = $this->selectRandomAvailableUser($availableUsers);
             
             if (!$assignedUser) {
-                \Log::warning('No available users found for LIFF reservation', [
-                    'calendar_id' => $calendarId,
-                    'reservation_datetime' => $request->reservation_datetime,
-                ]);
-                
                 return response()->json([
                     'message' => 'この時間枠は既に予約が埋まっています',
                 ], 409);
             }
-            
-            \Log::info('User assigned to LIFF reservation', [
-                'assigned_user_id' => $assignedUser->id,
-                'assigned_user_name' => $assignedUser->name,
-                'reservation_datetime' => $request->reservation_datetime,
-            ]);
 
             $reservation = Reservation::create([
                 'calendar_id' => $calendarId,
@@ -289,14 +274,6 @@ class LiffController extends Controller
                         'answer_text' => $answer['answer_text'],
                     ]);
                 }
-                \Log::info('Hearing form answers saved for LIFF reservation', [
-                    'reservation_id' => $reservation->id,
-                    'answers_count' => count($request->answers),
-                ]);
-            } else {
-                \Log::info('No hearing form answers provided for LIFF reservation', [
-                    'reservation_id' => $reservation->id,
-                ]);
             }
 
             // Googleカレンダーイベントを作成
@@ -309,11 +286,6 @@ class LiffController extends Controller
                 $inflowSource = InflowSource::find($request->inflow_source_id);
                 if ($inflowSource) {
                     $inflowSource->increment('conversions');
-                    \Log::info('Inflow source conversion recorded', [
-                        'inflow_source_id' => $inflowSource->id,
-                        'reservation_id' => $reservation->id,
-                        'conversions' => $inflowSource->fresh()->conversions,
-                    ]);
                 }
             }
 
@@ -329,7 +301,6 @@ class LiffController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Failed to create LIFF reservation: ' . $e->getMessage());
             
             return response()->json([
                 'message' => '予約の作成に失敗しました',
@@ -345,7 +316,6 @@ class LiffController extends Controller
     {
         $googleCalendarService = new \App\Services\GoogleCalendarService();
         
-        // カレンダー設定で指定されたGoogle Calendar連携ユーザーを取得
         $connectedUsers = $calendar->users()
             ->where('google_calendar_connected', true)
             ->whereNotNull('google_refresh_token')
@@ -353,27 +323,15 @@ class LiffController extends Controller
             ->get();
 
         if ($connectedUsers->isEmpty()) {
-            \Log::info('No Google Calendar connected users found for LIFF calendar', [
-                'calendar_id' => $calendar->id,
-            ]);
             return collect();
         }
 
         $availableUsers = collect();
         $slotStart = Carbon::parse($datetime);
         $slotEnd = $slotStart->copy()->addMinutes($durationMinutes);
-        
-        \Log::info('Checking user availability for LIFF slot', [
-            'calendar_id' => $calendar->id,
-            'slot_datetime' => $datetime,
-            'slot_start' => $slotStart->format('Y-m-d H:i:s'),
-            'slot_end' => $slotEnd->format('Y-m-d H:i:s'),
-            'duration_minutes' => $durationMinutes,
-        ]);
 
         foreach ($connectedUsers as $user) {
             try {
-                // このユーザーのイベントを取得
                 $userEvents = $googleCalendarService->getEventsForDateRange(
                     $user->google_refresh_token,
                     $user->google_calendar_id,
@@ -381,73 +339,29 @@ class LiffController extends Controller
                     $slotStart->copy()->endOfDay()
                 );
                 
-                \Log::info('Retrieved events for LIFF user availability check', [
-                    'user_id' => $user->id,
-                    'user_name' => $user->name,
-                    'events_count' => count($userEvents),
-                ]);
-                
-                // 時間重複をチェック
                 $hasConflict = false;
                 foreach ($userEvents as $event) {
                     $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
                     $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
                     
-                    // 同じ日付のイベントのみチェック
                     if ($slotStart->format('Y-m-d') !== $eventStart->format('Y-m-d')) {
                         continue;
                     }
                     
-                    // 時間が重複しているかチェック
-                    if ($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd)) {
-                        // 重複なし
-                        continue;
-                    } else {
-                        // 重複あり
+                    if (!($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd))) {
                         $hasConflict = true;
-                        \Log::info('LIFF user has conflict for slot', [
-                            'user_id' => $user->id,
-                            'user_name' => $user->name,
-                            'slot_datetime' => $datetime,
-                            'event_summary' => $event['summary'] ?? 'No title',
-                            'event_start' => $eventStart->format('Y-m-d H:i:s'),
-                            'event_end' => $eventEnd->format('Y-m-d H:i:s'),
-                        ]);
                         break;
                     }
                 }
                 
-                // このユーザーが空いている場合
                 if (!$hasConflict) {
                     $availableUsers->push($user);
-                    \Log::info('LIFF user is available for slot', [
-                        'user_id' => $user->id,
-                        'user_name' => $user->name,
-                        'slot_datetime' => $datetime,
-                    ]);
                 }
                 
             } catch (\Exception $e) {
-                \Log::error('Failed to check LIFF user availability: ' . $e->getMessage(), [
-                    'user_id' => $user->id,
-                    'slot_datetime' => $datetime,
-                ]);
-                // エラーの場合はこのユーザーをスキップ
                 continue;
             }
         }
-
-        \Log::info('Available users for LIFF slot', [
-            'slot_datetime' => $datetime,
-            'available_users_count' => $availableUsers->count(),
-            'available_users' => $availableUsers->map(function($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                ];
-            }),
-        ]);
 
         return $availableUsers;
     }
@@ -465,17 +379,8 @@ class LiffController extends Controller
             return $availableUsers->first();
         }
         
-        // 複数の場合はランダムに選択
         $randomIndex = rand(0, $availableUsers->count() - 1);
-        $selectedUser = $availableUsers->get($randomIndex);
-        
-        \Log::info('Random user selected for LIFF', [
-            'selected_user_id' => $selectedUser->id,
-            'selected_user_name' => $selectedUser->name,
-            'total_available_users' => $availableUsers->count(),
-        ]);
-        
-        return $selectedUser;
+        return $availableUsers->get($randomIndex);
     }
 
     /**
