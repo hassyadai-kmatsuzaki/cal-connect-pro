@@ -39,6 +39,11 @@
             Alert, Stack, CircularProgress, Snackbar, Paper, Divider 
         } = MaterialUI;
         
+        // CSRFトークンの設定
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+        axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+        
         function InviteAccept() {
             const [loading, setLoading] = useState(false);
             const [saving, setSaving] = useState(false);
@@ -119,27 +124,33 @@
             };
 
             return React.createElement(Box, { 
-                sx: { 
+                style: { 
                     minHeight: '100vh',
-                    bgcolor: 'grey.50',
-                    py: 4
+                    backgroundColor: '#f5f5f5',
+                    paddingTop: 32,
+                    paddingBottom: 32
                 }
             }, [
                 React.createElement(Box, { 
                     key: 'container',
-                    sx: { maxWidth: 600, mx: 'auto', px: 3 }
+                    style: { 
+                        maxWidth: 600, 
+                        margin: '0 auto', 
+                        paddingLeft: 24, 
+                        paddingRight: 24 
+                    }
                 }, [
                     React.createElement(Card, { key: 'card' }, [
                         React.createElement(CardContent, { key: 'content' }, [
                             React.createElement(Box, { 
                                 key: 'header',
-                                sx: { textAlign: 'center', mb: 4 }
+                                style: { textAlign: 'center', marginBottom: 32 }
                             }, [
                                 React.createElement(Typography, { 
                                     key: 'title',
                                     variant: 'h4', 
                                     gutterBottom: true, 
-                                    sx: { fontWeight: 'bold' }
+                                    style: { fontWeight: 'bold' }
                                 }, tenantName),
                                 React.createElement(Typography, { 
                                     key: 'subtitle',
@@ -151,7 +162,7 @@
                             React.createElement(Paper, { 
                                 key: 'info',
                                 variant: 'outlined', 
-                                sx: { p: 3, mb: 4 }
+                                style: { padding: 24, marginBottom: 32 }
                             }, [
                                 React.createElement(Typography, { 
                                     key: 'info-title',
@@ -208,7 +219,7 @@
                                 ])
                             ]),
                             
-                            React.createElement(Divider, { key: 'divider', sx: { my: 3 } }),
+                            React.createElement(Divider, { key: 'divider', style: { marginTop: 24, marginBottom: 24 } }),
                             
                             React.createElement(Typography, { 
                                 key: 'form-title',
@@ -240,7 +251,7 @@
                                 
                                 React.createElement(Box, { 
                                     key: 'terms',
-                                    sx: { display: 'flex', alignItems: 'center' }
+                                    style: { display: 'flex', alignItems: 'center' }
                                 }, [
                                     React.createElement('input', {
                                         key: 'checkbox',
@@ -273,7 +284,7 @@
                                     fullWidth: true,
                                     onClick: handleAccept,
                                     disabled: saving,
-                                    sx: { py: 1.5 }
+                                    style: { paddingTop: 12, paddingBottom: 12 }
                                 }, saving ? '作成中...' : 'アカウントを作成')
                             ])
                         ])
@@ -291,7 +302,7 @@
                         key: 'alert',
                         onClose: () => setSnackbar({ ...snackbar, open: false }),
                         severity: snackbar.severity,
-                        sx: { width: '100%' }
+                        style: { width: '100%' }
                     }, snackbar.message)
                 ])
             ]);
