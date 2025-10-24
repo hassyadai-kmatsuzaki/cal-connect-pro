@@ -66,20 +66,20 @@ const TenantHome: React.FC = () => {
       path: '/google-calendar',
       color: '#4285f4',
     },
-    {
-      title: '休日・受付時間設定',
-      description: '予約受付可能な時間帯の設定',
-      icon: <Schedule sx={{ fontSize: 40 }} />,
-      path: '/availability',
-      color: '#9c27b0',
-    },
-    {
-      title: '予定確認',
-      description: '予約一覧と詳細の確認',
-      icon: <EventAvailable sx={{ fontSize: 40 }} />,
-      path: '/reservations',
-      color: '#f50057',
-    },
+    // {
+    //   title: '休日・受付時間設定',
+    //   description: '予約受付可能な時間帯の設定',
+    //   icon: <Schedule sx={{ fontSize: 40 }} />,
+    //   path: '/availability',
+    //   color: '#9c27b0',
+    // },
+    // {
+    //   title: '予定確認',
+    //   description: '予約一覧と詳細の確認',
+    //   icon: <EventAvailable sx={{ fontSize: 40 }} />,
+    //   path: '/reservations',
+    //   color: '#f50057',
+    // },
   ];
 
   const cards = user?.role === 'admin' ? adminCards : userCards;
