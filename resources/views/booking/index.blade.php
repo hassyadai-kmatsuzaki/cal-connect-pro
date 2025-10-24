@@ -712,6 +712,8 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 // 日付カードのスクロール位置をリセット
                 resetDateCardsScroll();
+                // 次へボタンの状態を更新
+                updateNextWeekButtonState();
             });
 
             document.getElementById('nextWeek').addEventListener('click', () => {
@@ -738,6 +740,8 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 // 日付カードのスクロール位置をリセット
                 resetDateCardsScroll();
+                // 次へボタンの状態を更新
+                updateNextWeekButtonState();
             });
 
             document.getElementById('backToCalendar').addEventListener('click', () => {
@@ -775,35 +779,65 @@
                 document.getElementById('timeSlotsContainer').classList.add('hidden');
                 document.getElementById('emptySlots').classList.add('hidden');
                 
-                weekSlots = {};
-                const promises = [];
+                // カレンダーの日数制限をチェック
+                const maxDaysInAdvance = calendarData.days_in_advance || 30;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
                 
-                for (let i = 0; i < 7; i++) {
-                    const date = new Date(currentStartDate);
-                    date.setDate(date.getDate() + i);
-                    // 日本時間で日付を生成
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    const dateStr = `${year}-${month}-${day}`;
-                    
-                    console.log(`Loading slots for date: ${dateStr} (day ${i})`);
-                    
-                    promises.push(
-                        fetch(`${apiBasePath}/calendars/${calendarId}/available-slots?date=${dateStr}`)
-                            .then(res => res.json())
-                            .then(data => {
-                                console.log(`Received slots for ${dateStr}:`, data.data?.length || 0, 'slots');
-                                weekSlots[dateStr] = data.data || [];
-                            })
-                            .catch(err => {
-                                console.error(`Error loading slots for ${dateStr}:`, err);
-                                weekSlots[dateStr] = [];
-                            })
-                    );
+                // 現在の週の最後の日が制限内かチェック
+                const weekEnd = new Date(currentStartDate);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                
+                const daysFromToday = Math.ceil((weekEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysFromToday > maxDaysInAdvance) {
+                    showError(`${maxDaysInAdvance}日先までの予約のみ受け付けています`);
+                    // 制限内の週に戻す
+                    const maxDate = new Date(today);
+                    maxDate.setDate(maxDate.getDate() + maxDaysInAdvance);
+                    const daysToSubtract = Math.ceil((weekEnd.getTime() - maxDate.getTime()) / (1000 * 60 * 60 * 24));
+                    currentStartDate.setDate(currentStartDate.getDate() - daysToSubtract);
+                    renderDateCards();
+                    return;
                 }
                 
-                await Promise.all(promises);
+                const startDate = formatDateForAPI(currentStartDate);
+                const endDate = new Date(currentStartDate);
+                endDate.setDate(endDate.getDate() + 6);
+                const endDateStr = formatDateForAPI(endDate);
+                
+                console.log('Loading slots for week:', startDate, 'to', endDateStr);
+                
+                // 1回のAPIコールで週全体の空き枠を取得
+                const response = await fetch(`${apiBasePath}/calendars/${calendarId}/available-slots?start_date=${startDate}&end_date=${endDateStr}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Available slots response:', data);
+                
+                if (data.success && data.slots) {
+                    weekSlots = {};
+                    data.slots.forEach(slot => {
+                        const dateStr = slot.datetime.split('T')[0];
+                        if (!weekSlots[dateStr]) {
+                            weekSlots[dateStr] = [];
+                        }
+                        weekSlots[dateStr].push(slot);
+                    });
+                    
+                    console.log('Processed week slots:', weekSlots);
+                } else {
+                    throw new Error(data.message || 'Failed to load available slots');
+                }
                 
                 renderDateCards();
                 document.getElementById('loadingCalendar').classList.add('hidden');
@@ -811,8 +845,35 @@
                 // 最初の利用可能な日を自動選択
                 autoSelectFirstAvailableDate();
             } catch (error) {
-                showError('空き時間の取得に失敗しました');
+                console.error('Error loading week slots:', error);
+                showError('空き時間の取得に失敗しました: ' + error.message);
                 document.getElementById('loadingCalendar').classList.add('hidden');
+            }
+        }
+
+        // 次へボタンの状態を更新
+        function updateNextWeekButtonState() {
+            const nextWeekButton = document.getElementById('nextWeek');
+            const maxDaysInAdvance = calendarData.days_in_advance || 30;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // 次の週の最後の日が制限内かチェック
+            const nextWeekEnd = new Date(currentStartDate);
+            nextWeekEnd.setDate(nextWeekEnd.getDate() + 13); // 現在の週の最後 + 7日
+            
+            const daysFromToday = Math.ceil((nextWeekEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (daysFromToday > maxDaysInAdvance) {
+                nextWeekButton.disabled = true;
+                nextWeekButton.style.opacity = '0.5';
+                nextWeekButton.style.cursor = 'not-allowed';
+                nextWeekButton.title = `${maxDaysInAdvance}日先までの予約のみ受け付けています`;
+            } else {
+                nextWeekButton.disabled = false;
+                nextWeekButton.style.opacity = '1';
+                nextWeekButton.style.cursor = 'pointer';
+                nextWeekButton.title = '';
             }
         }
 
@@ -876,6 +937,9 @@
             endDate.setDate(endDate.getDate() + 6);
             document.getElementById('currentPeriod').textContent = 
                 `${currentStartDate.getMonth() + 1}/${currentStartDate.getDate()} - ${endDate.getMonth() + 1}/${endDate.getDate()}`;
+            
+            // 次へボタンの状態を更新
+            updateNextWeekButtonState();
         }
 
         // Auto-select first available date

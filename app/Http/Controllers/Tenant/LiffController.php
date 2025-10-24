@@ -300,9 +300,37 @@ class LiffController extends Controller
             // ヒアリングフォームがない場合はLINE名を使用
             $customerName = $lineUser->display_name ?: 'LINEユーザー';
 
+            // 指定された時間枠で空いているユーザーを取得
+            $availableUsers = $this->getAvailableUsersForSlot(
+                $calendar, 
+                $request->reservation_datetime, 
+                $durationMinutes
+            );
+            
+            // 空いているユーザーからランダムに1人を選択
+            $assignedUser = $this->selectRandomAvailableUser($availableUsers);
+            
+            if (!$assignedUser) {
+                \Log::warning('No available users found for LIFF reservation', [
+                    'calendar_id' => $calendarId,
+                    'reservation_datetime' => $request->reservation_datetime,
+                ]);
+                
+                return response()->json([
+                    'message' => 'この時間枠は既に予約が埋まっています',
+                ], 409);
+            }
+            
+            \Log::info('User assigned to LIFF reservation', [
+                'assigned_user_id' => $assignedUser->id,
+                'assigned_user_name' => $assignedUser->name,
+                'reservation_datetime' => $request->reservation_datetime,
+            ]);
+
             $reservation = Reservation::create([
                 'calendar_id' => $calendarId,
                 'line_user_id' => $lineUser->id,
+                'assigned_user_id' => $assignedUser->id,
                 'reservation_datetime' => $request->reservation_datetime,
                 'duration_minutes' => $durationMinutes,
                 'customer_name' => $customerName,
@@ -371,27 +399,178 @@ class LiffController extends Controller
     }
 
     /**
+     * 指定された時間枠で空いているユーザーを取得
+     */
+    private function getAvailableUsersForSlot(Calendar $calendar, string $datetime, int $durationMinutes)
+    {
+        $googleCalendarService = new \App\Services\GoogleCalendarService();
+        
+        // カレンダー設定で指定されたGoogle Calendar連携ユーザーを取得
+        $connectedUsers = $calendar->users()
+            ->where('google_calendar_connected', true)
+            ->whereNotNull('google_refresh_token')
+            ->whereNotNull('google_calendar_id')
+            ->get();
+
+        if ($connectedUsers->isEmpty()) {
+            \Log::info('No Google Calendar connected users found for LIFF calendar', [
+                'calendar_id' => $calendar->id,
+            ]);
+            return collect();
+        }
+
+        $availableUsers = collect();
+        $slotStart = Carbon::parse($datetime);
+        $slotEnd = $slotStart->copy()->addMinutes($durationMinutes);
+        
+        \Log::info('Checking user availability for LIFF slot', [
+            'calendar_id' => $calendar->id,
+            'slot_datetime' => $datetime,
+            'slot_start' => $slotStart->format('Y-m-d H:i:s'),
+            'slot_end' => $slotEnd->format('Y-m-d H:i:s'),
+            'duration_minutes' => $durationMinutes,
+        ]);
+
+        foreach ($connectedUsers as $user) {
+            try {
+                // このユーザーのイベントを取得
+                $userEvents = $googleCalendarService->getEventsForDateRange(
+                    $user->google_refresh_token,
+                    $user->google_calendar_id,
+                    $slotStart->copy()->startOfDay(),
+                    $slotStart->copy()->endOfDay()
+                );
+                
+                \Log::info('Retrieved events for LIFF user availability check', [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'events_count' => count($userEvents),
+                ]);
+                
+                // 時間重複をチェック
+                $hasConflict = false;
+                foreach ($userEvents as $event) {
+                    $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
+                    $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
+                    
+                    // 同じ日付のイベントのみチェック
+                    if ($slotStart->format('Y-m-d') !== $eventStart->format('Y-m-d')) {
+                        continue;
+                    }
+                    
+                    // 時間が重複しているかチェック
+                    if ($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd)) {
+                        // 重複なし
+                        continue;
+                    } else {
+                        // 重複あり
+                        $hasConflict = true;
+                        \Log::info('LIFF user has conflict for slot', [
+                            'user_id' => $user->id,
+                            'user_name' => $user->name,
+                            'slot_datetime' => $datetime,
+                            'event_summary' => $event['summary'] ?? 'No title',
+                            'event_start' => $eventStart->format('Y-m-d H:i:s'),
+                            'event_end' => $eventEnd->format('Y-m-d H:i:s'),
+                        ]);
+                        break;
+                    }
+                }
+                
+                // このユーザーが空いている場合
+                if (!$hasConflict) {
+                    $availableUsers->push($user);
+                    \Log::info('LIFF user is available for slot', [
+                        'user_id' => $user->id,
+                        'user_name' => $user->name,
+                        'slot_datetime' => $datetime,
+                    ]);
+                }
+                
+            } catch (\Exception $e) {
+                \Log::error('Failed to check LIFF user availability: ' . $e->getMessage(), [
+                    'user_id' => $user->id,
+                    'slot_datetime' => $datetime,
+                ]);
+                // エラーの場合はこのユーザーをスキップ
+                continue;
+            }
+        }
+
+        \Log::info('Available users for LIFF slot', [
+            'slot_datetime' => $datetime,
+            'available_users_count' => $availableUsers->count(),
+            'available_users' => $availableUsers->map(function($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ];
+            }),
+        ]);
+
+        return $availableUsers;
+    }
+
+    /**
+     * 空いているユーザーからランダムに1人を選択
+     */
+    private function selectRandomAvailableUser($availableUsers)
+    {
+        if ($availableUsers->isEmpty()) {
+            return null;
+        }
+        
+        if ($availableUsers->count() === 1) {
+            return $availableUsers->first();
+        }
+        
+        // 複数の場合はランダムに選択
+        $randomIndex = rand(0, $availableUsers->count() - 1);
+        $selectedUser = $availableUsers->get($randomIndex);
+        
+        \Log::info('Random user selected for LIFF', [
+            'selected_user_id' => $selectedUser->id,
+            'selected_user_name' => $selectedUser->name,
+            'total_available_users' => $availableUsers->count(),
+        ]);
+        
+        return $selectedUser;
+    }
+
+    /**
      * Googleカレンダーイベントを作成
      */
     private function createGoogleCalendarEvent(Reservation $reservation)
     {
         try {
-            $reservation->load(['calendar.users']);
+            $reservation->load(['calendar', 'assignedUser']);
             
-            if (!$reservation->calendar || !$reservation->calendar->users->count()) {
-                \Log::info('No calendar or users found for LIFF reservation', ['reservation_id' => $reservation->id]);
+            // アサインされたユーザーを取得
+            $assignedUser = $reservation->assignedUser;
+            
+            if (!$assignedUser) {
+                \Log::warning('No assigned user found for LIFF reservation', [
+                    'reservation_id' => $reservation->id,
+                    'calendar_id' => $reservation->calendar_id,
+                ]);
+                return;
+            }
+            
+            if (!$assignedUser->google_calendar_connected || !$assignedUser->google_refresh_token || !$assignedUser->google_calendar_id) {
+                \Log::warning('Assigned user does not have Google Calendar connected for LIFF', [
+                    'reservation_id' => $reservation->id,
+                    'assigned_user_id' => $assignedUser->id,
+                    'assigned_user_name' => $assignedUser->name,
+                ]);
                 return;
             }
 
             $googleCalendarService = new \App\Services\GoogleCalendarService();
-            
-            foreach ($reservation->calendar->users as $user) {
-                if (!$user->google_calendar_connected || !$user->google_calendar_id || !$user->google_refresh_token) {
-                    continue;
-                }
 
                 // イベントの説明文を構築
                 $description = $this->buildEventDescription($reservation);
+                $description .= "担当者: {$assignedUser->name}\n";
                 
                 // ヒアリング回答を追加（ヒアリングフォームが紐づいている場合のみ）
                 $answers = \App\Models\ReservationAnswer::where('reservation_id', $reservation->id)->get();
@@ -429,7 +608,7 @@ class LiffController extends Controller
                     ];
                 }
 
-                $eventResponse = $googleCalendarService->createEventForAdmin($user->google_refresh_token, $user->google_calendar_id, $eventData);
+                $eventResponse = $googleCalendarService->createEventForAdmin($assignedUser->google_refresh_token, $assignedUser->google_calendar_id, $eventData);
                 
                 if ($eventResponse && isset($eventResponse['id'])) {
                     $eventId = $eventResponse['id'];
@@ -463,10 +642,10 @@ class LiffController extends Controller
                     
                     \Log::info('Google Calendar event created for LIFF reservation', [
                         'reservation_id' => $reservation->id,
-                        'user_id' => $user->id,
+                        'assigned_user_id' => $assignedUser->id,
+                        'assigned_user_name' => $assignedUser->name,
                         'event_id' => $eventId,
                         'meet_url' => $meetUrl,
-                        'event_response' => $eventResponse,
                     ]);
                 }
             }
