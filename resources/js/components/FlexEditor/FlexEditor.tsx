@@ -46,7 +46,11 @@ import {
   exportFlexMessage,
   importFlexMessage,
   saveToLocalStorage,
-  loadFromLocalStorage
+  loadFromLocalStorage,
+  removeComponentById,
+  updateComponentById,
+  findComponentById,
+  addComponentToParent
 } from '../../utils/flexMessageUtils';
 import ComponentPalette from './ComponentPalette';
 import FlexCanvas from './FlexCanvas';

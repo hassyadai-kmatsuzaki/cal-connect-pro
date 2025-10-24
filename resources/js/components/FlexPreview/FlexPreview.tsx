@@ -24,7 +24,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { FlexMessage } from '../../types/flexMessage';
-import FlexComponentRenderer from './FlexComponentRenderer';
+import FlexComponentRenderer from '../FlexEditor/FlexComponentRenderer';
 
 interface FlexPreviewProps {
   data: FlexMessage;
