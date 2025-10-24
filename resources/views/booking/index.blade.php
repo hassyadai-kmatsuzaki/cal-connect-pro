@@ -596,6 +596,7 @@
         // State management
         let calendarData = null;
         let currentStartDate = new Date();
+        currentStartDate.setHours(0, 0, 0, 0); // 今日の0時0分0秒に設定
         let selectedDate = null;
         let selectedSlot = null;
         let weekSlots = {};
@@ -714,14 +715,27 @@
         // Setup event listeners
         function setupEventListeners() {
             document.getElementById('prevWeek').addEventListener('click', () => {
+                // 前へボタンの制御：今日より前の週には移動できない
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const prevWeekStart = new Date(currentStartDate);
+                prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+                
+                if (prevWeekStart < today) {
+                    showError('今日より前の週は表示できません');
+                    return;
+                }
+                
                 currentStartDate.setDate(currentStartDate.getDate() - 7);
                 loadWeekSlots();
                 // 日付移動時にスクロール位置をリセット
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 // 日付カードのスクロール位置をリセット
                 resetDateCardsScroll();
-                // 次へボタンの状態を更新
+                // ボタンの状態を更新
                 updateNextWeekButtonState();
+                updatePrevWeekButtonState();
             });
 
             document.getElementById('nextWeek').addEventListener('click', () => {
@@ -910,6 +924,29 @@
             }
         }
 
+        // 前へボタンの状態を更新
+        function updatePrevWeekButtonState() {
+            const prevWeekButton = document.getElementById('prevWeek');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // 前の週の開始日が今日より前かチェック
+            const prevWeekStart = new Date(currentStartDate);
+            prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+            
+            if (prevWeekStart < today) {
+                prevWeekButton.disabled = true;
+                prevWeekButton.style.opacity = '0.5';
+                prevWeekButton.style.cursor = 'not-allowed';
+                prevWeekButton.title = '今日より前の週は表示できません';
+            } else {
+                prevWeekButton.disabled = false;
+                prevWeekButton.style.opacity = '1';
+                prevWeekButton.style.cursor = 'pointer';
+                prevWeekButton.title = '';
+            }
+        }
+
         // Render date cards
         function renderDateCards() {
             const container = document.getElementById('dateCards');
@@ -989,8 +1026,9 @@
             document.getElementById('currentPeriod').textContent = 
                 `${currentStartDate.getMonth() + 1}/${currentStartDate.getDate()} - ${endDate.getMonth() + 1}/${endDate.getDate()}`;
             
-            // 次へボタンの状態を更新
+            // ボタンの状態を更新
             updateNextWeekButtonState();
+            updatePrevWeekButtonState();
         }
 
         // Auto-select first available date
