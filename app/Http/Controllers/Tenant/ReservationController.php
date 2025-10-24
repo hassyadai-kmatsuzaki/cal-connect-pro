@@ -454,6 +454,14 @@ class ReservationController extends Controller
             // 招待するカレンダーを準備
             $inviteCalendars = $reservation->calendar->invite_calendars ?? [];
             
+            \Log::info('ReservationController: Calendar type and invite setup', [
+                'calendar_id' => $reservation->calendar->id,
+                'calendar_type' => $reservation->calendar->type,
+                'assigned_user_id' => $assignedUser->id,
+                'assigned_user_name' => $assignedUser->name,
+                'initial_invite_calendars' => $inviteCalendars,
+            ]);
+            
             // typeが'all'の場合は、他の連携ユーザーも招待
             if ($reservation->calendar->type === 'all') {
                 $connectedUsers = $reservation->calendar->users()
@@ -463,15 +471,37 @@ class ReservationController extends Controller
                     ->where('id', '!=', $assignedUser->id) // アサインされたユーザー以外
                     ->get();
                 
+                \Log::info('ReservationController: Connected users for invitation', [
+                    'connected_users_count' => $connectedUsers->count(),
+                    'connected_users' => $connectedUsers->map(function($user) {
+                        return [
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                        ];
+                    })->toArray(),
+                ]);
+                
                 foreach ($connectedUsers as $user) {
-                    if ($user->email) {
-                        $inviteCalendars[] = $user->email;
+                    if ($user->google_calendar_id) {
+                        $inviteCalendars[] = $user->google_calendar_id;
                     }
                 }
             }
+            
+            \Log::info('ReservationController: Final invite calendars', [
+                'invite_calendars' => $inviteCalendars,
+                'will_use_invites' => !empty($inviteCalendars),
+            ]);
 
             // イベントを作成
             if (!empty($inviteCalendars)) {
+                \Log::info('ReservationController: Creating event with invites', [
+                    'assigned_user_id' => $assignedUser->id,
+                    'calendar_id' => $assignedUser->google_calendar_id,
+                    'invite_calendars' => $inviteCalendars,
+                ]);
+                
                 $eventResponse = $googleCalendarService->createEventWithInvites(
                     $assignedUser->google_refresh_token,
                     $assignedUser->google_calendar_id,
@@ -479,12 +509,22 @@ class ReservationController extends Controller
                     $inviteCalendars
                 );
             } else {
+                \Log::info('ReservationController: Creating event without invites', [
+                    'assigned_user_id' => $assignedUser->id,
+                    'calendar_id' => $assignedUser->google_calendar_id,
+                ]);
+                
                 $eventResponse = $googleCalendarService->createEventForAdmin(
                     $assignedUser->google_refresh_token,
                     $assignedUser->google_calendar_id,
                     $eventData
                 );
             }
+            
+            \Log::info('ReservationController: Event creation result', [
+                'result' => $eventResponse,
+                'has_id' => isset($eventResponse['id']),
+            ]);
             
             if ($eventResponse && isset($eventResponse['id'])) {
                 $eventId = $eventResponse['id'];

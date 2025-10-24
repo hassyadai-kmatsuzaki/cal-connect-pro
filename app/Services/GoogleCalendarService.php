@@ -398,18 +398,31 @@ class GoogleCalendarService
     public function createEventWithInvites(string $refreshToken, string $calendarId, array $eventData, array $inviteCalendars = [])
     {
         try {
+            \Log::info('GoogleCalendarService: createEventWithInvites called', [
+                'calendar_id' => $calendarId,
+                'invite_calendars' => $inviteCalendars,
+                'event_data' => $eventData,
+            ]);
+            
             $accessToken = $this->getAccessToken($refreshToken);
             
             // 招待するカレンダーをattendeesに追加
             if (!empty($inviteCalendars)) {
                 $eventData['attendees'] = [];
-                foreach ($inviteCalendars as $calendarEmail) {
+                foreach ($inviteCalendars as $calendarId) {
+                    // Google Calendar IDをattendeesに追加
+                    // カレンダーIDは通常、メールアドレス形式またはカレンダーID形式
                     $eventData['attendees'][] = [
-                        'email' => $calendarEmail,
+                        'email' => $calendarId, // Google Calendar IDをemailフィールドに設定
                         'responseStatus' => 'needsAction',
                     ];
                 }
             }
+            
+            \Log::info('GoogleCalendarService: Final event data with attendees', [
+                'event_data' => $eventData,
+                'attendees_count' => count($eventData['attendees'] ?? []),
+            ]);
             
             $response = $this->client->post("https://www.googleapis.com/calendar/v3/calendars/{$calendarId}/events", [
                 'headers' => [
@@ -425,9 +438,19 @@ class GoogleCalendarService
 
             $responseData = json_decode($response->getBody(), true);
             
+            \Log::info('GoogleCalendarService: Event creation response', [
+                'status_code' => $response->getStatusCode(),
+                'response_data' => $responseData,
+            ]);
+            
             return $responseData;
             
         } catch (\Exception $e) {
+            \Log::error('GoogleCalendarService: createEventWithInvites failed', [
+                'error' => $e->getMessage(),
+                'calendar_id' => $calendarId,
+                'invite_calendars' => $inviteCalendars,
+            ]);
             return null;
         }
     }

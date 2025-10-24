@@ -460,6 +460,14 @@ class LiffController extends Controller
                 // 招待するカレンダーを準備
                 $inviteCalendars = $reservation->calendar->invite_calendars ?? [];
                 
+                \Log::info('LiffController: Calendar type and invite setup', [
+                    'calendar_id' => $reservation->calendar->id,
+                    'calendar_type' => $reservation->calendar->type,
+                    'assigned_user_id' => $assignedUser->id,
+                    'assigned_user_name' => $assignedUser->name,
+                    'initial_invite_calendars' => $inviteCalendars,
+                ]);
+                
                 // typeが'all'の場合は、他の連携ユーザーも招待
                 if ($reservation->calendar->type === 'all') {
                     $connectedUsers = $reservation->calendar->users()
@@ -469,14 +477,37 @@ class LiffController extends Controller
                         ->where('id', '!=', $assignedUser->id) // アサインされたユーザー以外
                         ->get();
                     
+                    \Log::info('LiffController: Connected users for invitation', [
+                        'connected_users_count' => $connectedUsers->count(),
+                        'connected_users' => $connectedUsers->map(function($user) {
+                            return [
+                                'id' => $user->id,
+                                'name' => $user->name,
+                                'email' => $user->email,
+                                'google_calendar_id' => $user->google_calendar_id,
+                            ];
+                        })->toArray(),
+                    ]);
+                    
                     foreach ($connectedUsers as $user) {
-                        if ($user->email) {
-                            $inviteCalendars[] = $user->email;
+                        if ($user->google_calendar_id) {
+                            $inviteCalendars[] = $user->google_calendar_id;
                         }
                     }
                 }
                 
+                \Log::info('LiffController: Final invite calendars', [
+                    'invite_calendars' => $inviteCalendars,
+                    'will_use_invites' => !empty($inviteCalendars),
+                ]);
+                
                 if (!empty($inviteCalendars)) {
+                    \Log::info('LiffController: Creating event with invites', [
+                        'assigned_user_id' => $assignedUser->id,
+                        'calendar_id' => $assignedUser->google_calendar_id,
+                        'invite_calendars' => $inviteCalendars,
+                    ]);
+                    
                     $eventResponse = $googleCalendarService->createEventWithInvites(
                         $assignedUser->google_refresh_token,
                         $assignedUser->google_calendar_id,
@@ -484,8 +515,18 @@ class LiffController extends Controller
                         $inviteCalendars
                     );
                 } else {
+                    \Log::info('LiffController: Creating event without invites', [
+                        'assigned_user_id' => $assignedUser->id,
+                        'calendar_id' => $assignedUser->google_calendar_id,
+                    ]);
+                    
                     $eventResponse = $googleCalendarService->createEventForAdmin($assignedUser->google_refresh_token, $assignedUser->google_calendar_id, $eventData);
                 }
+                
+                \Log::info('LiffController: Event creation result', [
+                    'result' => $eventResponse,
+                    'has_id' => isset($eventResponse['id']),
+                ]);
                 
                 if ($eventResponse && isset($eventResponse['id'])) {
                     $eventId = $eventResponse['id'];
