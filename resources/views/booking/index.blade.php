@@ -935,7 +935,15 @@
                 
                 // 日数制限をチェック
                 const daysFromToday = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                const isWithinLimit = daysFromToday <= maxDaysInAdvance;
+                const isWithinLimit = daysFromToday >= 0 && daysFromToday <= maxDaysInAdvance;
+                
+                console.log('Date card check:', {
+                    dateStr: dateStr,
+                    daysFromToday: daysFromToday,
+                    maxDaysInAdvance: maxDaysInAdvance,
+                    isWithinLimit: isWithinLimit,
+                    isToday: isToday
+                });
                 
                 const hasSlots = weekSlots[dateStr] && weekSlots[dateStr].length > 0;
                 const isAvailable = isWithinLimit && hasSlots;
