@@ -25,7 +25,7 @@ class HearingForm extends Model
      */
     public function items(): HasMany
     {
-        return $this->hasMany(HearingFormItem::class)->orderBy('sort_order');
+        return $this->hasMany(HearingFormItem::class)->orderBy('order');
     }
 
     /**
