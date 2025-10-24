@@ -79,6 +79,9 @@ class PublicReservationController extends Controller
         $endDate = $request->query('end_date');
         $singleDate = $request->query('date');
 
+        // デバッグ用：リクエストパラメータを出力
+        error_log("DEBUG: getAvailableSlots called with start_date={$startDate}, end_date={$endDate}, single_date={$singleDate}");
+
         if ($startDate && $endDate) {
             // 日付範囲での取得
             $validator = Validator::make($request->query(), [
@@ -136,6 +139,9 @@ class PublicReservationController extends Controller
         $end = Carbon::parse($endDate);
         $allSlots = [];
         
+        // デバッグ用：メソッド開始時の情報を出力
+        error_log("DEBUG: Starting date range processing from {$startDate} to {$endDate}");
+        
         \Log::info('Processing date range', [
             'start_date' => $startDate,
             'end_date' => $endDate,
@@ -145,12 +151,28 @@ class PublicReservationController extends Controller
         // 各日付に対して空き枠を取得
         $currentDate = $start->copy();
         while ($currentDate->lte($end)) {
+            // デバッグ用：各日付の処理開始を出力
+            error_log("DEBUG: Processing date {$currentDate->format('Y-m-d')}, day_of_week: " . $this->getDayOfWeekJapanese($currentDate));
+            
             $daySlots = $this->getAvailableSlotsForSingleDate($calendar, $currentDate->format('Y-m-d'));
+            
+            // デバッグ用：各日付の結果を出力
+            error_log("DEBUG: Date {$currentDate->format('Y-m-d')} returned " . count($daySlots) . " slots");
             
             \Log::info('Processed single date', [
                 'date' => $currentDate->format('Y-m-d'),
                 'slots_count' => count($daySlots),
+                'day_of_week' => $this->getDayOfWeekJapanese($currentDate),
             ]);
+            
+            // デバッグ用：各日付の結果を出力
+            if (count($daySlots) === 0) {
+                \Log::warning('No slots for date', [
+                    'date' => $currentDate->format('Y-m-d'),
+                    'day_of_week' => $this->getDayOfWeekJapanese($currentDate),
+                    'accept_days' => $calendar->accept_days,
+                ]);
+            }
             
             $allSlots = array_merge($allSlots, $daySlots);
             $currentDate->addDay();
@@ -175,15 +197,29 @@ class PublicReservationController extends Controller
         $dateObj = Carbon::parse($date);
         $dayOfWeek = $this->getDayOfWeekJapanese($dateObj);
         
+        // デバッグ用：メソッド開始時の情報を出力
+        error_log("DEBUG: Processing date {$date}, day_of_week: {$dayOfWeek}, calendar_id: {$calendar->id}");
+        
+        \Log::info('Processing single date', [
+            'date' => $date,
+            'day_of_week' => $dayOfWeek,
+            'calendar_id' => $calendar->id,
+        ]);
+        
         // カレンダーの受付曜日をチェック
         $acceptDays = $calendar->accept_days ?? [];
         if (!empty($acceptDays) && !in_array($dayOfWeek, $acceptDays)) {
+            \Log::info('Date rejected - not in accept days', [
+                'date' => $date,
+                'day_of_week' => $dayOfWeek,
+                'accept_days' => $acceptDays,
+            ]);
             return [];
         }
         
         // 何日先まで受け付けるかチェック
         $maxDaysInAdvance = $calendar->days_in_advance ?? 30;
-        $daysFromToday = $dateObj->diffInDays(Carbon::today());
+        $daysFromToday = Carbon::today()->diffInDays($dateObj);
         
         \Log::info('Days in advance check', [
             'date' => $dateObj->format('Y-m-d'),
@@ -194,6 +230,11 @@ class PublicReservationController extends Controller
         ]);
         
         if ($daysFromToday < 0 || $daysFromToday > $maxDaysInAdvance) {
+            \Log::info('Date rejected - outside days in advance limit', [
+                'date' => $date,
+                'days_from_today' => $daysFromToday,
+                'max_days_in_advance' => $maxDaysInAdvance,
+            ]);
             return [];
         }
         
@@ -210,6 +251,15 @@ class PublicReservationController extends Controller
         $endTime = Carbon::parse($dateObj->format('Y-m-d') . ' ' . ($calendar->end_time ?? '18:00'));
         $intervalMinutes = $calendar->display_interval ?? 30;
         $durationMinutes = $calendar->event_duration ?? 60;
+        
+        \Log::info('Time slot generation', [
+            'date' => $date,
+            'start_time' => $startTime->format('Y-m-d H:i:s'),
+            'end_time' => $endTime->format('Y-m-d H:i:s'),
+            'interval_minutes' => $intervalMinutes,
+            'duration_minutes' => $durationMinutes,
+            'min_booking_time' => $minBookingTime->format('Y-m-d H:i:s'),
+        ]);
         
         $timeSlots = [];
         $currentTime = $startTime->copy();
@@ -231,8 +281,18 @@ class PublicReservationController extends Controller
             $currentTime->addMinutes($intervalMinutes);
         }
         
+        \Log::info('Generated time slots', [
+            'date' => $date,
+            'time_slots_count' => count($timeSlots),
+        ]);
+        
         // Google Calendar連携ユーザーを取得して実際の空き枠をチェック
         $slots = $this->getActualAvailability($calendar, $timeSlots);
+        
+        \Log::info('Final slots result', [
+            'date' => $date,
+            'final_slots_count' => count($slots),
+        ]);
         
         return $slots;
     }
