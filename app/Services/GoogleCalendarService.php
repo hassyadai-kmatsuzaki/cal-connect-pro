@@ -409,11 +409,11 @@ class GoogleCalendarService
             // 招待するカレンダーをattendeesに追加
             if (!empty($inviteCalendars)) {
                 $eventData['attendees'] = [];
-                foreach ($inviteCalendars as $calendarId) {
+                foreach ($inviteCalendars as $inviteCalendarId) {
                     // Google Calendar IDをattendeesに追加
                     // カレンダーIDは通常、メールアドレス形式またはカレンダーID形式
                     $eventData['attendees'][] = [
-                        'email' => $calendarId, // Google Calendar IDをemailフィールドに設定
+                        'email' => $inviteCalendarId, // Google Calendar IDをemailフィールドに設定
                         'responseStatus' => 'needsAction',
                     ];
                 }
