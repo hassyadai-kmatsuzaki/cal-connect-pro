@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
+use App\Http\Controllers\Tenant\InvitationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,6 +55,10 @@ Route::middleware(['web'])->group(function () {
         
         return redirect("{$protocol}://{$centralDomain}/book/{$tenantId}/{$calendarId}");
     })->name('book.index');
+    
+    // 招待受信ページ（テナントドメイン）
+    Route::get('/invite/{token}', [InvitationController::class, 'show'])->name('tenant.invite.show');
+    Route::post('/invite/accept', [InvitationController::class, 'accept'])->name('tenant.invite.accept');
 });
 
 // フロントエンドルートはweb.phpのfallbackで処理

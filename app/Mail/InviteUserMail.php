@@ -49,10 +49,13 @@ class InviteUserMail extends Mailable
         $tenant = \App\Models\Tenant::find($currentTenantId);
         if ($tenant && $tenant->domains()->exists()) {
             $domain = $tenant->domains()->first()->domain;
-            return "https://{$domain}/invite/{$this->invitation->token}";
+            $protocol = app()->environment('production') ? 'https' : 'http';
+            return "{$protocol}://{$domain}/invite/{$this->invitation->token}";
         }
         
-        // フォールバック: セントラルドメイン経由
-        return "https://anken.cloud/invite/{$currentTenantId}/{$this->invitation->token}";
+        // フォールバック: セントラルドメイン経由（現在は使用しない）
+        $protocol = app()->environment('production') ? 'https' : 'http';
+        $centralDomain = app()->environment('production') ? 'anken.cloud' : 'localhost:8230';
+        return "{$protocol}://{$centralDomain}/invite/{$currentTenantId}/{$this->invitation->token}";
     }
 }
