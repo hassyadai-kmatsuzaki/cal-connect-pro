@@ -228,32 +228,64 @@ class PublicReservationController extends Controller
             }
         }
 
-        // 各時間枠の空き状況をチェック（いずれかのユーザーが空いていれば予約可能）
+        // 各時間枠の空き状況をチェック（カレンダーのtypeに応じて）
         $availableSlots = [];
         foreach ($timeSlots as $slot) {
             $isAvailable = false;
             
-            foreach ($connectedUsers as $user) {
-                $userEvents = $userEventsCache[$user->id][$slot['date']] ?? [];
+            if ($calendar->type === 'all') {
+                // 全ユーザーが空いている場合のみ予約可能
+                $allUsersAvailable = true;
                 
-                $hasConflict = false;
-                $slotStart = Carbon::parse($slot['datetime']);
-                $slotEnd = $slotStart->copy()->addMinutes($slot['duration_minutes']);
-                
-                foreach ($userEvents as $event) {
-                    $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
-                    $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
+                foreach ($connectedUsers as $user) {
+                    $userEvents = $userEventsCache[$user->id][$slot['date']] ?? [];
                     
-                    if ($slotStart->format('Y-m-d') === $eventStart->format('Y-m-d') &&
-                        !($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd))) {
-                        $hasConflict = true;
+                    $hasConflict = false;
+                    $slotStart = Carbon::parse($slot['datetime']);
+                    $slotEnd = $slotStart->copy()->addMinutes($slot['duration_minutes']);
+                    
+                    foreach ($userEvents as $event) {
+                        $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
+                        $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
+                        
+                        if ($slotStart->format('Y-m-d') === $eventStart->format('Y-m-d') &&
+                            !($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd))) {
+                            $hasConflict = true;
+                            break;
+                        }
+                    }
+                    
+                    if ($hasConflict) {
+                        $allUsersAvailable = false;
                         break;
                     }
                 }
                 
-                if (!$hasConflict) {
-                    $isAvailable = true;
-                    break;
+                $isAvailable = $allUsersAvailable;
+            } else {
+                // いずれかのユーザーが空いていれば予約可能（デフォルト: any）
+                foreach ($connectedUsers as $user) {
+                    $userEvents = $userEventsCache[$user->id][$slot['date']] ?? [];
+                    
+                    $hasConflict = false;
+                    $slotStart = Carbon::parse($slot['datetime']);
+                    $slotEnd = $slotStart->copy()->addMinutes($slot['duration_minutes']);
+                    
+                    foreach ($userEvents as $event) {
+                        $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
+                        $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
+                        
+                        if ($slotStart->format('Y-m-d') === $eventStart->format('Y-m-d') &&
+                            !($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd))) {
+                            $hasConflict = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$hasConflict) {
+                        $isAvailable = true;
+                        break;
+                    }
                 }
             }
 
