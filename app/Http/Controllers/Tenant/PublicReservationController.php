@@ -113,7 +113,7 @@ class PublicReservationController extends Controller
                 return $this->getAvailableSlotsForDateRange($calendar, $startDate, $endDate);
             } else {
                 // 単一日付での取得
-                return $this->getAvailableSlotsForSingleDate($calendar, $singleDate);
+                return $this->getAvailableSlotsForSingleDatePublic($calendar, $singleDate);
             }
             
         } catch (\Exception $e) {
@@ -136,20 +136,30 @@ class PublicReservationController extends Controller
         $end = Carbon::parse($endDate);
         $allSlots = [];
         
+        \Log::info('Processing date range', [
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'calendar_id' => $calendar->id,
+        ]);
+        
         // 各日付に対して空き枠を取得
         $currentDate = $start->copy();
         while ($currentDate->lte($end)) {
             $daySlots = $this->getAvailableSlotsForSingleDate($calendar, $currentDate->format('Y-m-d'));
             
-            if ($daySlots->getStatusCode() === 200) {
-                $dayData = json_decode($daySlots->getContent(), true);
-                if (isset($dayData['data']) && is_array($dayData['data'])) {
-                    $allSlots = array_merge($allSlots, $dayData['data']);
-                }
-            }
+            \Log::info('Processed single date', [
+                'date' => $currentDate->format('Y-m-d'),
+                'slots_count' => count($daySlots),
+            ]);
             
+            $allSlots = array_merge($allSlots, $daySlots);
             $currentDate->addDay();
         }
+        
+        \Log::info('Date range processing completed', [
+            'total_slots' => count($allSlots),
+            'date_range' => $startDate . ' to ' . $endDate,
+        ]);
         
         return response()->json([
             'success' => true,
@@ -158,7 +168,7 @@ class PublicReservationController extends Controller
     }
 
     /**
-     * 単一日付での空き枠取得
+     * 単一日付での空き枠取得（内部用）
      */
     private function getAvailableSlotsForSingleDate(Calendar $calendar, string $date)
     {
@@ -168,10 +178,7 @@ class PublicReservationController extends Controller
         // カレンダーの受付曜日をチェック
         $acceptDays = $calendar->accept_days ?? [];
         if (!empty($acceptDays) && !in_array($dayOfWeek, $acceptDays)) {
-            return response()->json([
-                'data' => [],
-                'message' => 'この日は予約を受け付けていません',
-            ]);
+            return [];
         }
         
         // 何日先まで受け付けるかチェック
@@ -187,10 +194,7 @@ class PublicReservationController extends Controller
         ]);
         
         if ($daysFromToday < 0 || $daysFromToday > $maxDaysInAdvance) {
-            return response()->json([
-                'data' => [],
-                'message' => "{$maxDaysInAdvance}日先までの予約のみ受け付けています",
-            ]);
+            return [];
         }
         
         // 当日の何時間後から受け付けるかチェック
@@ -227,8 +231,15 @@ class PublicReservationController extends Controller
             $currentTime->addMinutes($intervalMinutes);
         }
         
-        // Google Calendar連携ユーザーを取得して実際の空き枠をチェック
-        $slots = $this->getActualAvailability($calendar, $timeSlots);
+        return $slots;
+    }
+
+    /**
+     * 単一日付での空き枠取得（公開API用）
+     */
+    private function getAvailableSlotsForSingleDatePublic(Calendar $calendar, string $date)
+    {
+        $slots = $this->getAvailableSlotsForSingleDate($calendar, $date);
         
         return response()->json([
             'data' => $slots,
