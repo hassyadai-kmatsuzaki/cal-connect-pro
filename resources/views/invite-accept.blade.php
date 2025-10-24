@@ -138,7 +138,7 @@
                                 React.createElement(Typography, { 
                                     key: 'title',
                                     variant: 'h4', 
-                                    gutterBottom, 
+                                    gutterBottom: true, 
                                     sx: { fontWeight: 'bold' }
                                 }, tenantName),
                                 React.createElement(Typography, { 
@@ -156,7 +156,7 @@
                                 React.createElement(Typography, { 
                                     key: 'info-title',
                                     variant: 'h6', 
-                                    gutterBottom
+                                    gutterBottom: true
                                 }, '招待内容'),
                                 React.createElement(Stack, { key: 'info-stack', spacing: 2 }, [
                                     React.createElement(Box, { key: 'name' }, [
@@ -213,7 +213,7 @@
                             React.createElement(Typography, { 
                                 key: 'form-title',
                                 variant: 'h6', 
-                                gutterBottom
+                                gutterBottom: true
                             }, 'アカウント作成'),
                             
                             React.createElement(Stack, { key: 'form', spacing: 3 }, [
