@@ -30,15 +30,15 @@ import {
   Settings as SettingsIcon,
   Palette as PaletteIcon
 } from '@mui/icons-material';
-import { FlexMessage, FlexComponent } from '../../resources/js/types/flexMessage';
-import { findComponentById } from '../../resources/js/utils/flexMessageUtils';
+import { FlexMessage, FlexComponent } from '../../types/flexMessage';
+import { findComponentById } from '../../utils/flexMessageUtils';
 import { 
   sizeOptions, 
   colorPresets, 
   actionTypes, 
   layoutOptions, 
   aspectRatioOptions 
-} from '../../resources/js/utils/mockData';
+} from '../../utils/mockData';
 
 interface PropertyPanelProps {
   selectedComponent?: string;

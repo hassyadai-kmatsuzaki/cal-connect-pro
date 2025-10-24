@@ -15,8 +15,8 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import { useDrop } from 'react-dnd';
-import { FlexComponent, DragItem } from '../../resources/js/types/flexMessage';
-import { addComponentId } from '../../resources/js/utils/flexMessageUtils';
+import { FlexComponent, DragItem } from '../../types/flexMessage';
+import { addComponentId } from '../../utils/flexMessageUtils';
 
 interface FlexComponentRendererProps {
   component: FlexComponent;

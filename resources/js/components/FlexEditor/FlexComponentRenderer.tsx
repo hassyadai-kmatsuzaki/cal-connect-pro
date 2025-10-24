@@ -4,9 +4,7 @@ import {
   Typography,
   Button,
   IconButton,
-  Tooltip,
-  Chip,
-  Paper
+  Tooltip
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -25,6 +23,7 @@ interface FlexComponentRendererProps {
   onDelete?: () => void;
   onCopy?: () => void;
   onAddChild?: (component: FlexComponent) => void;
+  onSelect?: (componentId: string) => void;
   depth?: number;
 }
 
@@ -35,6 +34,7 @@ const FlexComponentRenderer: React.FC<FlexComponentRendererProps> = ({
   onDelete,
   onCopy,
   onAddChild,
+  onSelect,
   depth = 0
 }) => {
   // ドロップ処理
@@ -54,7 +54,10 @@ const FlexComponentRenderer: React.FC<FlexComponentRendererProps> = ({
   // コンポーネントのクリック処理
   const handleClick = useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
-  }, []);
+    if (component.id && onSelect) {
+      onSelect(component.id);
+    }
+  }, [component.id, onSelect]);
 
   // テキストコンポーネントのレンダリング
   const renderText = useCallback(() => {
@@ -150,7 +153,7 @@ const FlexComponentRenderer: React.FC<FlexComponentRendererProps> = ({
         {component.action?.label || 'ボタン'}
       </Button>
     );
-  }, [component]);
+  }, [component, handleClick]);
 
   // ボックスコンポーネントのレンダリング
   const renderBox = useCallback(() => {
@@ -182,7 +185,9 @@ const FlexComponentRenderer: React.FC<FlexComponentRendererProps> = ({
           bottom: component.offsetBottom,
           left: component.offsetStart,
           right: component.offsetEnd,
-          border: isOver && canDrop ? '2px dashed #0066cc' : 'none',
+          border: isOver && canDrop ? '2px dashed #0066cc' : 
+                 (component.borderWidth && component.borderWidth !== 'none' ? 
+                 `${getBorderWidth(component.borderWidth)} solid ${component.borderColor || '#e0e0e0'}` : 'none'),
           backgroundColor: isOver && canDrop ? 'rgba(0, 102, 204, 0.1)' : undefined,
         }}
         onClick={handleClick}
@@ -207,6 +212,7 @@ const FlexComponentRenderer: React.FC<FlexComponentRendererProps> = ({
               ...component,
               contents: [...(component.contents || []), newChild]
             })}
+            onSelect={onSelect}
             depth={depth + 1}
           />
         ))}

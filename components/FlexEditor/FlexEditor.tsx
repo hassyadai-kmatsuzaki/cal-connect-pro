@@ -38,7 +38,7 @@ import {
 } from '@mui/icons-material';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { FlexMessage, FlexComponent, FlexEditorState } from '../../resources/js/types/flexMessage';
+import { FlexMessage, FlexComponent, FlexEditorState } from '../../types/flexMessage';
 import { 
   createDefaultFlexMessage, 
   deepCloneComponent, 
@@ -47,13 +47,13 @@ import {
   importFlexMessage,
   saveToLocalStorage,
   loadFromLocalStorage
-} from '../../resources/js/utils/flexMessageUtils';
+} from '../../utils/flexMessageUtils';
 import ComponentPalette from './ComponentPalette';
 import FlexCanvas from './FlexCanvas';
 import PropertyPanel from './PropertyPanel';
 import LayerPanel from './LayerPanel';
 import FlexPreview from '../FlexPreview/FlexPreview';
-import { mockFlexTemplates } from '../../resources/js/utils/mockData';
+import { mockFlexTemplates } from '../../utils/mockData';
 
 interface FlexEditorProps {
   initialData?: FlexMessage;

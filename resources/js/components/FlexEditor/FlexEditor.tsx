@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -16,10 +16,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Switch,
-  FormControlLabel,
-  Slider,
-  Chip,
   Alert,
   Snackbar
 } from '@mui/material';
@@ -28,7 +24,7 @@ import {
   Preview as PreviewIcon,
   Undo as UndoIcon,
   Redo as RedoIcon,
-  Copy as CopyIcon,
+  ContentCopy as CopyIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   Settings as SettingsIcon,
@@ -55,9 +51,7 @@ import {
 import ComponentPalette from './ComponentPalette';
 import FlexCanvas from './FlexCanvas';
 import PropertyPanel from './PropertyPanel';
-import LayerPanel from './LayerPanel';
 import FlexPreview from '../FlexPreview/FlexPreview';
-import { mockFlexTemplates } from '../../utils/mockData';
 
 interface FlexEditorProps {
   initialData?: FlexMessage;
@@ -72,7 +66,13 @@ const FlexEditor: React.FC<FlexEditorProps> = ({
 }) => {
   // エディタの状態管理
   const [flexMessage, setFlexMessage] = useState<FlexMessage>(
-    initialData || createDefaultFlexMessage()
+    initialData ? {
+      ...initialData,
+      body: initialData.body ? addComponentId(initialData.body) : undefined
+    } : {
+      ...createDefaultFlexMessage(),
+      body: addComponentId(createDefaultFlexMessage().body!)
+    }
   );
   const [selectedComponent, setSelectedComponent] = useState<string | undefined>();
   const [editorState, setEditorState] = useState<FlexEditorState>({
@@ -89,7 +89,6 @@ const FlexEditor: React.FC<FlexEditorProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [showCodeEditor, setShowCodeEditor] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [codeEditorValue, setCodeEditorValue] = useState('');
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -117,8 +116,14 @@ const FlexEditor: React.FC<FlexEditorProps> = ({
 
   // Flexメッセージの更新
   const updateFlexMessage = useCallback((newMessage: FlexMessage) => {
-    setFlexMessage(newMessage);
-    addToHistory(newMessage);
+    // コンポーネントにIDを付与
+    const messageWithIds = addComponentId(newMessage.body!);
+    const messageToSave = {
+      ...newMessage,
+      body: messageWithIds
+    };
+    setFlexMessage(messageToSave);
+    addToHistory(messageToSave);
   }, [addToHistory]);
 
   // コンポーネントの選択

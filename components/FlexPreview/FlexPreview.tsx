@@ -23,7 +23,7 @@ import {
   Share as ShareIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { FlexMessage } from '../../resources/js/types/flexMessage';
+import { FlexMessage } from '../../types/flexMessage';
 import FlexComponentRenderer from './FlexComponentRenderer';
 
 interface FlexPreviewProps {

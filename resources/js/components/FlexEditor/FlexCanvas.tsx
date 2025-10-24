@@ -3,18 +3,14 @@ import {
   Box,
   Paper,
   Typography,
-  IconButton,
-  Tooltip,
   Menu,
   MenuItem,
   ListItemIcon,
   ListItemText,
   Divider,
-  Chip,
-  Alert
+  Chip
 } from '@mui/material';
 import {
-  MoreVert as MoreVertIcon,
   ContentCopy as CopyIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -254,6 +250,7 @@ const FlexCanvas: React.FC<FlexCanvasProps> = ({
                   component={data.body}
                   isSelected={selectedComponent === data.body.id}
                   onUpdate={(updates) => data.body?.id && onUpdateComponent(data.body.id, updates)}
+                  onSelect={onSelectComponent}
                 />
               </Box>
             )}

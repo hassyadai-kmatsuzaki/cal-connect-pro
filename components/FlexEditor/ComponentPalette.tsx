@@ -28,7 +28,7 @@ import {
   HorizontalRule as SeparatorIcon
 } from '@mui/icons-material';
 import { useDrag } from 'react-dnd';
-import { FlexComponent } from '../../resources/js/types/flexMessage';
+import { FlexComponent } from '../../types/flexMessage';
 import { 
   createDefaultText, 
   createDefaultImage, 
@@ -36,8 +36,8 @@ import {
   createDefaultBox, 
   createDefaultIcon, 
   createDefaultSeparator 
-} from '../../resources/js/utils/flexMessageUtils';
-import { componentTypes } from '../../resources/js/utils/mockData';
+} from '../../utils/flexMessageUtils';
+import { componentTypes } from '../../utils/mockData';
 
 interface ComponentPaletteProps {
   onAddComponent: (component: FlexComponent, parentId?: string) => void;
