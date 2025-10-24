@@ -703,6 +703,14 @@
             }
         }
 
+        // API用の日付フォーマット関数
+        function formatDateForAPI(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         // Setup event listeners
         function setupEventListeners() {
             document.getElementById('prevWeek').addEventListener('click', () => {
@@ -722,11 +730,19 @@
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
-                // 次の週の最後の日（6日後）が制限内かチェック
+                // 次の週の最後の日が制限内かチェック
                 const nextWeekEnd = new Date(currentStartDate);
-                nextWeekEnd.setDate(nextWeekEnd.getDate() + 13); // 現在の週の最後 + 7日
+                nextWeekEnd.setDate(nextWeekEnd.getDate() + 13); // 現在の週の開始 + 13日 = 次の週の最後の日
                 
                 const daysFromToday = Math.ceil((nextWeekEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                console.log('Next week click check:', {
+                    currentStartDate: currentStartDate.toDateString(),
+                    nextWeekEnd: nextWeekEnd.toDateString(),
+                    daysFromToday: daysFromToday,
+                    maxDaysInAdvance: maxDaysInAdvance,
+                    shouldBlock: daysFromToday > maxDaysInAdvance
+                });
                 
                 if (daysFromToday > maxDaysInAdvance) {
                     // 制限を超える場合は移動しない
@@ -789,6 +805,14 @@
                 weekEnd.setDate(weekEnd.getDate() + 6);
                 
                 const daysFromToday = Math.ceil((weekEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                console.log('Load week slots check:', {
+                    currentStartDate: currentStartDate.toDateString(),
+                    weekEnd: weekEnd.toDateString(),
+                    daysFromToday: daysFromToday,
+                    maxDaysInAdvance: maxDaysInAdvance,
+                    shouldBlock: daysFromToday > maxDaysInAdvance
+                });
                 
                 if (daysFromToday > maxDaysInAdvance) {
                     showError(`${maxDaysInAdvance}日先までの予約のみ受け付けています`);
@@ -860,9 +884,17 @@
             
             // 次の週の最後の日が制限内かチェック
             const nextWeekEnd = new Date(currentStartDate);
-            nextWeekEnd.setDate(nextWeekEnd.getDate() + 13); // 現在の週の最後 + 7日
+            nextWeekEnd.setDate(nextWeekEnd.getDate() + 13); // 現在の週の開始 + 13日 = 次の週の最後の日
             
             const daysFromToday = Math.ceil((nextWeekEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            
+            console.log('Next week button state check:', {
+                currentStartDate: currentStartDate.toDateString(),
+                nextWeekEnd: nextWeekEnd.toDateString(),
+                daysFromToday: daysFromToday,
+                maxDaysInAdvance: maxDaysInAdvance,
+                shouldDisable: daysFromToday > maxDaysInAdvance
+            });
             
             if (daysFromToday > maxDaysInAdvance) {
                 nextWeekButton.disabled = true;
