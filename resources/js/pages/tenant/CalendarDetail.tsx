@@ -74,6 +74,7 @@ const CalendarDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   
   const [calendar, setCalendar] = useState<Calendar | null>(null);
+  const [liffId, setLiffId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -83,9 +84,10 @@ const CalendarDetail: React.FC = () => {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
 
-  // カレンダー詳細を取得
+  // カレンダー詳細とLIFF IDを取得
   useEffect(() => {
     fetchCalendar();
+    fetchLiffId();
   }, [id]);
 
   const fetchCalendar = async () => {
@@ -102,6 +104,18 @@ const CalendarDetail: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLiffId = async () => {
+    try {
+      const response = await axios.get('/api/line-settings');
+      const lineSettings = response.data.data;
+      if (lineSettings && lineSettings.liff_id) {
+        setLiffId(lineSettings.liff_id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch LIFF ID:', error);
     }
   };
 
@@ -179,7 +193,7 @@ const CalendarDetail: React.FC = () => {
       
       if (lineSettings && lineSettings.liff_id) {
         // LIFF URLを生成
-        const liffUrl = `https://liff.line.me/${lineSettings.liff_id}?route=booking&calendar=${calendar.id}`;
+        const liffUrl = `https://liff.line.me/${lineSettings.liff_id}/?route=booking&calendar=${calendar.id}`;
         navigator.clipboard.writeText(liffUrl);
         setSnackbar({
           open: true,
@@ -307,7 +321,7 @@ const CalendarDetail: React.FC = () => {
               }
             >
               <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-                予約URL: https://anken.cloud/book/{window.location.hostname.split('.')[0]}/{calendar.id}
+                LIFF予約URL: https://liff.line.me/{liffId || 'LIFF_ID'}/?route=booking&calendar={calendar.id}
               </Typography>
             </Alert>
           </Grid>
