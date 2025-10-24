@@ -9,6 +9,7 @@ use App\Models\InflowSource;
 use App\Models\ReservationAnswer;
 use App\Models\User;
 use App\Services\GoogleCalendarService;
+use App\Services\SlackNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -448,23 +449,13 @@ class PublicReservationController extends Controller
      */
     private function createGoogleCalendarEvent(Reservation $reservation, Calendar $calendar)
     {
-        // アサインされたユーザーを取得
         $assignedUser = $reservation->assignedUser;
         
         if (!$assignedUser) {
-            \Log::warning('No assigned user found for reservation', [
-                'reservation_id' => $reservation->id,
-                'calendar_id' => $calendar->id,
-            ]);
             return;
         }
         
         if (!$assignedUser->google_calendar_connected || !$assignedUser->google_refresh_token || !$assignedUser->google_calendar_id) {
-            \Log::warning('Assigned user does not have Google Calendar connected', [
-                'reservation_id' => $reservation->id,
-                'assigned_user_id' => $assignedUser->id,
-                'assigned_user_name' => $assignedUser->name,
-            ]);
             return;
         }
 
@@ -494,52 +485,116 @@ class PublicReservationController extends Controller
         $eventData = [
             'summary' => "予約: {$calendar->name}",
             'description' => $description,
-            'start_datetime' => $reservationStart->toRfc3339String(),
-            'end_datetime' => $reservationEnd->toRfc3339String(),
+            'start' => [
+                'dateTime' => $reservationStart->toRfc3339String(),
+                'timeZone' => 'Asia/Tokyo',
+            ],
+            'end' => [
+                'dateTime' => $reservationEnd->toRfc3339String(),
+                'timeZone' => 'Asia/Tokyo',
+            ],
         ];
 
-        // Meet URLを生成するかチェック
+        // Meet URLを生成する場合
         if ($calendar->include_meet_url) {
-            $eventData['meet_url'] = true;
+            $eventData['conferenceData'] = [
+                'createRequest' => [
+                    'requestId' => uniqid(),
+                    'conferenceSolutionKey' => [
+                        'type' => 'hangoutsMeet'
+                    ]
+                ]
+            ];
         }
 
-        // アサインされたユーザーのGoogle Calendarにイベントを作成
+        // 招待するカレンダーを準備
+        $inviteCalendars = $calendar->invite_calendars ?? [];
+        
+        // typeが'all'の場合は、他の連携ユーザーも招待
+        if ($calendar->type === 'all') {
+            $connectedUsers = $calendar->users()
+                ->where('google_calendar_connected', true)
+                ->whereNotNull('google_refresh_token')
+                ->whereNotNull('google_calendar_id')
+                ->where('id', '!=', $assignedUser->id) // アサインされたユーザー以外
+                ->get();
+            
+            foreach ($connectedUsers as $user) {
+                if ($user->email) {
+                    $inviteCalendars[] = $user->email;
+                }
+            }
+        }
+        
         try {
-            $result = $googleCalendarService->createEventForPublic(
-                $assignedUser->google_refresh_token,
-                $assignedUser->google_calendar_id,
-                $eventData
-            );
-
-            if ($result['success']) {
-                $reservation->update([
-                    'google_event_id' => $result['event_id'],
-                    'meet_url' => $result['meet_url'],
-                ]);
-                
-                \Log::info('Google Calendar event created successfully', [
-                    'reservation_id' => $reservation->id,
-                    'assigned_user_id' => $assignedUser->id,
-                    'assigned_user_name' => $assignedUser->name,
-                    'calendar_id' => $calendar->id,
-                    'event_id' => $result['event_id'],
-                    'meet_url' => $result['meet_url'],
-                ]);
+            if (!empty($inviteCalendars)) {
+                $result = $googleCalendarService->createEventWithInvites(
+                    $assignedUser->google_refresh_token,
+                    $assignedUser->google_calendar_id,
+                    $eventData,
+                    $inviteCalendars
+                );
             } else {
-                \Log::error('Failed to create Google Calendar event', [
-                    'reservation_id' => $reservation->id,
-                    'assigned_user_id' => $assignedUser->id,
-                    'calendar_id' => $calendar->id,
-                    'error' => $result['error'],
+                $result = $googleCalendarService->createEventForAdmin(
+                    $assignedUser->google_refresh_token,
+                    $assignedUser->google_calendar_id,
+                    $eventData
+                );
+            }
+
+            if ($result && isset($result['id'])) {
+                $eventId = $result['id'];
+                $meetUrl = null;
+                
+                // Meet URLを取得
+                if ($calendar->include_meet_url) {
+                    if (isset($result['conferenceData']['entryPoints'][0]['uri'])) {
+                        $meetUrl = $result['conferenceData']['entryPoints'][0]['uri'];
+                    } elseif (isset($result['hangoutLink'])) {
+                        $meetUrl = $result['hangoutLink'];
+                    }
+                }
+                
+                $reservation->update([
+                    'google_event_id' => $eventId,
+                    'meet_url' => $meetUrl,
                 ]);
             }
         } catch (\Exception $e) {
-            \Log::error('Exception creating Google Calendar event', [
-                'reservation_id' => $reservation->id,
-                'assigned_user_id' => $assignedUser->id,
-                'calendar_id' => $calendar->id,
-                'error' => $e->getMessage(),
-            ]);
+            // エラーハンドリング
+        }
+    }
+
+    /**
+     * Slack通知を送信
+     */
+    private function sendSlackNotification(Reservation $reservation, Calendar $calendar)
+    {
+        if (!$calendar->slack_notify || !$calendar->slack_webhook) {
+            return;
+        }
+
+        try {
+            $slackService = new SlackNotificationService();
+            
+            $reservationData = [
+                'customer_name' => $reservation->customer_name,
+                'reservation_datetime' => Carbon::parse($reservation->reservation_datetime)->format('Y年m月d日 H:i'),
+                'duration_minutes' => $reservation->duration_minutes,
+                'customer_email' => $reservation->customer_email,
+                'customer_phone' => $reservation->customer_phone,
+                'status' => $reservation->status,
+                'assigned_user_name' => $reservation->assignedUser->name ?? '',
+                'calendar_name' => $calendar->name,
+                'inflow_source_name' => $reservation->inflowSource->name ?? '',
+            ];
+
+            $message = $slackService->generateReservationMessage($reservationData, $calendar->slack_message);
+            
+            $slackService->sendNotification($calendar->slack_webhook, $message);
+            
+        } catch (\Exception $e) {
+            // エラーハンドリング
         }
     }
 

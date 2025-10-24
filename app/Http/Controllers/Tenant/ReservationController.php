@@ -402,77 +402,111 @@ class ReservationController extends Controller
     private function createGoogleCalendarEvent(Reservation $reservation)
     {
         try {
-            $reservation->load(['calendar.users']);
+            $reservation->load(['calendar.users', 'assignedUser']);
             
             if (!$reservation->calendar || !$reservation->calendar->users->count()) {
-                \Log::info('No calendar or users found for reservation', ['reservation_id' => $reservation->id]);
+                return;
+            }
+
+            // アサインされたユーザーを優先、なければ最初のユーザーを使用
+            $assignedUser = $reservation->assignedUser;
+            if (!$assignedUser || !$assignedUser->google_calendar_connected) {
+                $assignedUser = $reservation->calendar->users
+                    ->where('google_calendar_connected', true)
+                    ->whereNotNull('google_refresh_token')
+                    ->whereNotNull('google_calendar_id')
+                    ->first();
+            }
+
+            if (!$assignedUser) {
                 return;
             }
 
             $googleCalendarService = new GoogleCalendarService();
-            
-            foreach ($reservation->calendar->users as $user) {
-                if (!$user->google_calendar_connected || !$user->google_calendar_id || !$user->google_refresh_token) {
-                    continue;
-                }
 
-                $eventData = [
-                    'summary' => "予約: {$reservation->customer_name}",
-                    'description' => $this->buildEventDescription($reservation),
-                    'start' => [
-                        'dateTime' => Carbon::parse($reservation->reservation_datetime)->toRfc3339String(),
-                        'timeZone' => 'Asia/Tokyo',
-                    ],
-                    'end' => [
-                        'dateTime' => Carbon::parse($reservation->reservation_datetime)
-                            ->addMinutes($reservation->duration_minutes)
-                            ->toRfc3339String(),
-                        'timeZone' => 'Asia/Tokyo',
-                    ],
-                ];
+            $eventData = [
+                'summary' => "予約: {$reservation->customer_name}",
+                'description' => $this->buildEventDescription($reservation),
+                'start' => [
+                    'dateTime' => Carbon::parse($reservation->reservation_datetime)->toRfc3339String(),
+                    'timeZone' => 'Asia/Tokyo',
+                ],
+                'end' => [
+                    'dateTime' => Carbon::parse($reservation->reservation_datetime)
+                        ->addMinutes($reservation->duration_minutes)
+                        ->toRfc3339String(),
+                    'timeZone' => 'Asia/Tokyo',
+                ],
+            ];
 
-                // Meet URLを生成する場合
-                if ($reservation->calendar->include_meet_url) {
-                    $eventData['conferenceData'] = [
-                        'createRequest' => [
-                            'requestId' => uniqid(),
-                            'conferenceSolutionKey' => [
-                                'type' => 'hangoutsMeet'
-                            ]
+            // Meet URLを生成する場合
+            if ($reservation->calendar->include_meet_url) {
+                $eventData['conferenceData'] = [
+                    'createRequest' => [
+                        'requestId' => uniqid(),
+                        'conferenceSolutionKey' => [
+                            'type' => 'hangoutsMeet'
                         ]
-                    ];
-                }
+                    ]
+                ];
+            }
 
-                $eventResponse = $googleCalendarService->createEventForAdmin($user->google_refresh_token, $user->google_calendar_id, $eventData);
+            // 招待するカレンダーを準備
+            $inviteCalendars = $reservation->calendar->invite_calendars ?? [];
+            
+            // typeが'all'の場合は、他の連携ユーザーも招待
+            if ($reservation->calendar->type === 'all') {
+                $connectedUsers = $reservation->calendar->users()
+                    ->where('google_calendar_connected', true)
+                    ->whereNotNull('google_refresh_token')
+                    ->whereNotNull('google_calendar_id')
+                    ->where('id', '!=', $assignedUser->id) // アサインされたユーザー以外
+                    ->get();
                 
-                if ($eventResponse && isset($eventResponse['id'])) {
-                    $eventId = $eventResponse['id'];
-                    $meetUrl = null;
-                    
-                    // Meet URLを取得
-                    if ($reservation->calendar->include_meet_url && isset($eventResponse['conferenceData']['entryPoints'][0]['uri'])) {
-                        $meetUrl = $eventResponse['conferenceData']['entryPoints'][0]['uri'];
+                foreach ($connectedUsers as $user) {
+                    if ($user->email) {
+                        $inviteCalendars[] = $user->email;
                     }
-                    
-                    $reservation->update([
-                        'google_event_id' => $eventId,
-                        'meet_url' => $meetUrl,
-                    ]);
-                    
-                    \Log::info('Google Calendar event created', [
-                        'reservation_id' => $reservation->id,
-                        'user_id' => $user->id,
-                        'event_id' => $eventId,
-                        'meet_url' => $meetUrl,
-                        'event_response' => $eventResponse,
-                    ]);
                 }
+            }
+
+            // イベントを作成
+            if (!empty($inviteCalendars)) {
+                $eventResponse = $googleCalendarService->createEventWithInvites(
+                    $assignedUser->google_refresh_token,
+                    $assignedUser->google_calendar_id,
+                    $eventData,
+                    $inviteCalendars
+                );
+            } else {
+                $eventResponse = $googleCalendarService->createEventForAdmin(
+                    $assignedUser->google_refresh_token,
+                    $assignedUser->google_calendar_id,
+                    $eventData
+                );
+            }
+            
+            if ($eventResponse && isset($eventResponse['id'])) {
+                $eventId = $eventResponse['id'];
+                $meetUrl = null;
+                
+                // Meet URLを取得
+                if ($reservation->calendar->include_meet_url) {
+                    if (isset($eventResponse['conferenceData']['entryPoints'][0]['uri'])) {
+                        $meetUrl = $eventResponse['conferenceData']['entryPoints'][0]['uri'];
+                    } elseif (isset($eventResponse['hangoutLink'])) {
+                        $meetUrl = $eventResponse['hangoutLink'];
+                    }
+                }
+                
+                $reservation->update([
+                    'google_event_id' => $eventId,
+                    'meet_url' => $meetUrl,
+                ]);
             }
             
         } catch (\Exception $e) {
-            \Log::error('Failed to create Google Calendar event: ' . $e->getMessage(), [
-                'reservation_id' => $reservation->id,
-            ]);
+            // エラーハンドリング
         }
     }
 

@@ -370,12 +370,6 @@ class GoogleCalendarService
     public function createEventForAdmin(string $refreshToken, string $calendarId, array $eventData)
     {
         try {
-            \Log::info('GoogleCalendarService: Creating event', [
-                'calendar_id' => $calendarId,
-                'event_data' => $eventData,
-            ]);
-
-            // リフレッシュトークンでアクセストークンを取得
             $accessToken = $this->getAccessToken($refreshToken);
             
             $response = $this->client->post("https://www.googleapis.com/calendar/v3/calendars/{$calendarId}/events", [
@@ -391,23 +385,49 @@ class GoogleCalendarService
 
             $responseData = json_decode($response->getBody(), true);
             
-            \Log::info('GoogleCalendarService: Event created successfully', [
-                'calendar_id' => $calendarId,
-                'event_id' => $responseData['id'] ?? null,
-                'meet_url' => $responseData['conferenceData']['entryPoints'][0]['uri'] ?? null,
-                'conference_data' => $responseData['conferenceData'] ?? null,
-                'hangout_link' => $responseData['hangoutLink'] ?? null,
-                'full_response' => $responseData,
+            return $responseData;
+            
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * invite_calendarsの招待機能付きでイベントを作成
+     */
+    public function createEventWithInvites(string $refreshToken, string $calendarId, array $eventData, array $inviteCalendars = [])
+    {
+        try {
+            $accessToken = $this->getAccessToken($refreshToken);
+            
+            // 招待するカレンダーをattendeesに追加
+            if (!empty($inviteCalendars)) {
+                $eventData['attendees'] = [];
+                foreach ($inviteCalendars as $calendarEmail) {
+                    $eventData['attendees'][] = [
+                        'email' => $calendarEmail,
+                        'responseStatus' => 'needsAction',
+                    ];
+                }
+            }
+            
+            $response = $this->client->post("https://www.googleapis.com/calendar/v3/calendars/{$calendarId}/events", [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $accessToken,
+                    'Content-Type' => 'application/json',
+                ],
+                'query' => [
+                    'conferenceDataVersion' => 1,
+                    'sendUpdates' => 'all', // 招待者に通知を送信
+                ],
+                'json' => $eventData,
             ]);
+
+            $responseData = json_decode($response->getBody(), true);
             
             return $responseData;
             
         } catch (\Exception $e) {
-            \Log::error('GoogleCalendarService: Failed to create event', [
-                'calendar_id' => $calendarId,
-                'error' => $e->getMessage(),
-                'error_trace' => $e->getTraceAsString(),
-            ]);
             return null;
         }
     }
