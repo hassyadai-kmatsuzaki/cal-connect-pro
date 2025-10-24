@@ -5,40 +5,299 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>アカウント招待 - {{ $tenantName }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@mui/material@5.15.0/umd/material-ui.production.min.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
+        * {
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
+            box-sizing: border-box;
         }
-        #root {
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
             min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .invite-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .invite-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 40px;
+        }
+        
+        .invite-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .invite-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .invite-subtitle {
+            font-size: 18px;
+            color: #666;
+            font-weight: 400;
+        }
+        
+        .invite-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .invite-info-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+        
+        .invite-info-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 400;
+        }
+        
+        .invite-divider {
+            border: none;
+            border-top: 1px solid #e9ecef;
+            margin: 24px 0;
+        }
+        
+        .invite-form-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 24px;
+        }
+        
+        .invite-form {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-input {
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #06C755;
+        }
+        
+        .checkbox-group {
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .form-checkbox {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .form-checkbox-label {
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+        }
+        
+        .alert {
+            padding: 16px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .alert-info {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+        
+        .btn {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: #06C755;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background-color: #05a547;
+        }
+        
+        .btn-primary:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn-large {
+            padding: 16px 24px;
+            font-size: 16px;
+        }
+        
+        .snackbar {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 16px 24px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            cursor: pointer;
+        }
+        
+        .snackbar-success {
+            background-color: #4caf50;
+        }
+        
+        .snackbar-error {
+            background-color: #f44336;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .invite-card {
+                padding: 24px;
+            }
+            
+            .invite-title {
+                font-size: 24px;
+            }
+            
+            .invite-subtitle {
+                font-size: 16px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div class="invite-container">
+        <div class="invite-card">
+            <div class="invite-header">
+                <h1 class="invite-title">{{ $tenantName }}</h1>
+                <h2 class="invite-subtitle">アカウント招待</h2>
+            </div>
+            
+            <div class="invite-info">
+                <h3 class="invite-info-title">招待内容</h3>
+                <div class="invite-info-stack">
+                    <div class="info-item">
+                        <div class="info-label">お名前</div>
+                        <div class="info-value">{{ $invitation->name }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">メールアドレス</div>
+                        <div class="info-value">{{ $invitation->email }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">権限</div>
+                        <div class="info-value">{{ $invitation->role === 'admin' ? '管理者' : 'ユーザー' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">招待者</div>
+                        <div class="info-value">{{ $invitation->inviter->name }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">有効期限</div>
+                        <div class="info-value">{{ \Carbon\Carbon::parse($invitation->expires_at)->format('Y年m月d日 H:i') }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="invite-divider">
+            
+            <h3 class="invite-form-title">アカウント作成</h3>
+            
+            <form id="inviteForm" class="invite-form">
+                <div class="form-group">
+                    <label for="password" class="form-label">パスワード</label>
+                    <input type="password" id="password" name="password" class="form-input" required placeholder="8文字以上で入力してください">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password_confirmation" class="form-label">パスワード確認</label>
+                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-input" required>
+                </div>
+                
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="terms_accepted" name="terms_accepted" class="form-checkbox" required>
+                    <label for="terms_accepted" class="form-checkbox-label">利用規約に同意する</label>
+                </div>
+                
+                <div class="alert alert-info">
+                    アカウント作成後、自動的にログインされ、ダッシュボードに移動します。
+                </div>
+                
+                <button type="submit" id="submitBtn" class="btn btn-primary btn-large">
+                    アカウントを作成
+                </button>
+            </form>
+        </div>
+    </div>
     
     <script>
-        const invitationData = {!! json_encode([
-            'invitation' => $invitation,
-            'tenantName' => $tenantName,
-            'token' => $token,
-        ]) !!};
-        
-        const { useState, useEffect } = React;
-        const { 
-            Box, Card, CardContent, Typography, Button, TextField, 
-            Alert, Stack, CircularProgress, Snackbar, Paper, Divider 
-        } = MaterialUI;
-        
         // CSRFトークンの設定
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (csrfToken) {
@@ -53,286 +312,89 @@
             console.error('Failed to set CSRF cookie:', error);
         });
         
-        function InviteAccept() {
-            const [loading, setLoading] = useState(false);
-            const [saving, setSaving] = useState(false);
-            const [formData, setFormData] = useState({
-                password: '',
-                password_confirmation: '',
-                terms_accepted: false,
-            });
-            const [snackbar, setSnackbar] = useState({
-                open: false,
-                message: '',
-                severity: 'success'
-            });
-
-            const { invitation, tenantName, token } = invitationData;
-            const expiresAt = new Date(invitation.expires_at);
-            const roleText = invitation.role === 'admin' ? '管理者' : 'ユーザー';
-
-            const handleAccept = async () => {
-                if (!formData.password || !formData.password_confirmation) {
-                    setSnackbar({
-                        open: true,
-                        message: 'パスワードを入力してください',
-                        severity: 'error',
-                    });
-                    return;
-                }
-
-                if (formData.password !== formData.password_confirmation) {
-                    setSnackbar({
-                        open: true,
-                        message: 'パスワードが一致しません',
-                        severity: 'error',
-                    });
-                    return;
-                }
-
-                if (!formData.terms_accepted) {
-                    setSnackbar({
-                        open: true,
-                        message: '利用規約に同意してください',
-                        severity: 'error',
-                    });
-                    return;
-                }
-
-                setSaving(true);
-                try {
-                    // CSRFトークンを再取得
-                    const currentCsrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                    
-                    const response = await axios.post('/invite/accept', {
-                        token,
-                        password: formData.password,
-                        password_confirmation: formData.password_confirmation,
-                        terms_accepted: formData.terms_accepted,
-                    }, {
-                        headers: {
-                            'X-CSRF-TOKEN': currentCsrfToken,
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Content-Type': 'application/json',
-                        }
-                    });
-
-                    setSnackbar({
-                        open: true,
-                        message: 'アカウントが作成されました！',
-                        severity: 'success',
-                    });
-
-                    // ダッシュボードにリダイレクト
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 2000);
-
-                } catch (error) {
-                    console.error('Failed to accept invitation:', error);
-                    const errorMessage = error.response?.data?.message || 'アカウントの作成に失敗しました';
-                    setSnackbar({
-                        open: true,
-                        message: errorMessage,
-                        severity: 'error',
-                    });
-                } finally {
-                    setSaving(false);
-                }
-            };
-
-            return React.createElement(Box, { 
-                style: { 
-                    minHeight: '100vh',
-                    backgroundColor: '#f5f5f5',
-                    paddingTop: 32,
-                    paddingBottom: 32
-                }
-            }, [
-                React.createElement(Box, { 
-                    key: 'container',
-                    style: { 
-                        maxWidth: 600, 
-                        margin: '0 auto', 
-                        paddingLeft: 24, 
-                        paddingRight: 24 
-                    }
-                }, [
-                    React.createElement(Card, { key: 'card' }, [
-                        React.createElement(CardContent, { key: 'content' }, [
-                            React.createElement(Box, { 
-                                key: 'header',
-                                style: { textAlign: 'center', marginBottom: 32 }
-                            }, [
-                                React.createElement(Typography, { 
-                                    key: 'title',
-                                    variant: 'h4', 
-                                    gutterBottom: true, 
-                                    style: { fontWeight: 'bold' }
-                                }, tenantName),
-                                React.createElement(Typography, { 
-                                    key: 'subtitle',
-                                    variant: 'h6', 
-                                    color: 'text.secondary'
-                                }, 'アカウント招待')
-                            ]),
-                            
-                            React.createElement(Paper, { 
-                                key: 'info',
-                                variant: 'outlined', 
-                                style: { padding: 24, marginBottom: 32 }
-                            }, [
-                                React.createElement(Typography, { 
-                                    key: 'info-title',
-                                    variant: 'h6', 
-                                    gutterBottom: true
-                                }, '招待内容'),
-                                React.createElement(Stack, { 
-                                    key: 'info-stack', 
-                                    style: { gap: 16 }
-                                }, [
-                                    React.createElement(Box, { key: 'name' }, [
-                                        React.createElement(Typography, { 
-                                            variant: 'body2', 
-                                            color: 'text.secondary'
-                                        }, 'お名前'),
-                                        React.createElement(Typography, { 
-                                            variant: 'body1', 
-                                            sx: { fontWeight: 'bold' }
-                                        }, invitation.name)
-                                    ]),
-                                    React.createElement(Box, { key: 'email' }, [
-                                        React.createElement(Typography, { 
-                                            variant: 'body2', 
-                                            color: 'text.secondary'
-                                        }, 'メールアドレス'),
-                                        React.createElement(Typography, { 
-                                            variant: 'body1'
-                                        }, invitation.email)
-                                    ]),
-                                    React.createElement(Box, { key: 'role' }, [
-                                        React.createElement(Typography, { 
-                                            variant: 'body2', 
-                                            color: 'text.secondary'
-                                        }, '権限'),
-                                        React.createElement(Typography, { 
-                                            variant: 'body1'
-                                        }, roleText)
-                                    ]),
-                                    React.createElement(Box, { key: 'inviter' }, [
-                                        React.createElement(Typography, { 
-                                            variant: 'body2', 
-                                            color: 'text.secondary'
-                                        }, '招待者'),
-                                        React.createElement(Typography, { 
-                                            variant: 'body1'
-                                        }, invitation.inviter.name)
-                                    ]),
-                                    React.createElement(Box, { key: 'expires' }, [
-                                        React.createElement(Typography, { 
-                                            variant: 'body2', 
-                                            color: 'text.secondary'
-                                        }, '有効期限'),
-                                        React.createElement(Typography, { 
-                                            variant: 'body1'
-                                        }, expiresAt.toLocaleDateString('ja-JP') + ' ' + expiresAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }))
-                                    ])
-                                ])
-                            ]),
-                            
-                            React.createElement(Divider, { key: 'divider', style: { marginTop: 24, marginBottom: 24 } }),
-                            
-                            React.createElement(Typography, { 
-                                key: 'form-title',
-                                variant: 'h6', 
-                                gutterBottom: true
-                            }, 'アカウント作成'),
-                            
-                            React.createElement(Stack, { 
-                                key: 'form', 
-                                style: { gap: 24 }
-                            }, [
-                                React.createElement(TextField, {
-                                    key: 'password',
-                                    label: 'パスワード',
-                                    type: 'password',
-                                    fullWidth: true,
-                                    required: true,
-                                    value: formData.password,
-                                    onChange: (e) => setFormData({ ...formData, password: e.target.value }),
-                                    helperText: '8文字以上で入力してください'
-                                }),
-                                
-                                React.createElement(TextField, {
-                                    key: 'password-confirm',
-                                    label: 'パスワード確認',
-                                    type: 'password',
-                                    fullWidth: true,
-                                    required: true,
-                                    value: formData.password_confirmation,
-                                    onChange: (e) => setFormData({ ...formData, password_confirmation: e.target.value })
-                                }),
-                                
-                                React.createElement(Box, { 
-                                    key: 'terms',
-                                    style: { display: 'flex', alignItems: 'center' }
-                                }, [
-                                    React.createElement('input', {
-                                        key: 'checkbox',
-                                        type: 'checkbox',
-                                        id: 'terms_accepted',
-                                        checked: formData.terms_accepted,
-                                        onChange: (e) => setFormData({ ...formData, terms_accepted: e.target.checked }),
-                                        style: { marginRight: 8 }
-                                    }),
-                                    React.createElement('label', { 
-                                        key: 'label',
-                                        htmlFor: 'terms_accepted'
-                                    }, [
-                                        React.createElement(Typography, { 
-                                            key: 'label-text',
-                                            variant: 'body2'
-                                        }, '利用規約に同意する')
-                                    ])
-                                ]),
-                                
-                                React.createElement(Alert, { 
-                                    key: 'info-alert',
-                                    severity: 'info'
-                                }, 'アカウント作成後、自動的にログインされ、ダッシュボードに移動します。'),
-                                
-                                React.createElement(Button, {
-                                    key: 'submit',
-                                    variant: 'contained',
-                                    size: 'large',
-                                    fullWidth: true,
-                                    onClick: handleAccept,
-                                    disabled: saving,
-                                    style: { paddingTop: 12, paddingBottom: 12 }
-                                }, saving ? '作成中...' : 'アカウントを作成')
-                            ])
-                        ])
-                    ])
-                ]),
+        // フォーム送信処理
+        document.getElementById('inviteForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const password = document.getElementById('password').value;
+            const passwordConfirmation = document.getElementById('password_confirmation').value;
+            const termsAccepted = document.getElementById('terms_accepted').checked;
+            
+            // バリデーション
+            if (!password || !passwordConfirmation) {
+                showSnackbar('パスワードを入力してください', 'error');
+                return;
+            }
+            
+            if (password !== passwordConfirmation) {
+                showSnackbar('パスワードが一致しません', 'error');
+                return;
+            }
+            
+            if (!termsAccepted) {
+                showSnackbar('利用規約に同意してください', 'error');
+                return;
+            }
+            
+            if (password.length < 8) {
+                showSnackbar('パスワードは8文字以上で入力してください', 'error');
+                return;
+            }
+            
+            // 送信ボタンを無効化
+            submitBtn.disabled = true;
+            submitBtn.textContent = '作成中...';
+            
+            try {
+                const response = await axios.post('/invite/accept', {
+                    token: '{{ $token }}',
+                    password: password,
+                    password_confirmation: passwordConfirmation,
+                    terms_accepted: termsAccepted,
+                });
                 
-                React.createElement(Snackbar, {
-                    key: 'snackbar',
-                    open: snackbar.open,
-                    autoHideDuration: 6000,
-                    onClose: () => setSnackbar({ ...snackbar, open: false }),
-                    anchorOrigin: { vertical: 'top', horizontal: 'center' }
-                }, [
-                    React.createElement(Alert, {
-                        key: 'alert',
-                        onClose: () => setSnackbar({ ...snackbar, open: false }),
-                        severity: snackbar.severity,
-                        style: { width: '100%' }
-                    }, snackbar.message)
-                ])
-            ]);
+                showSnackbar('アカウントが作成されました！', 'success');
+                
+                // ダッシュボードにリダイレクト
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Failed to accept invitation:', error);
+                const errorMessage = error.response?.data?.message || 'アカウントの作成に失敗しました';
+                showSnackbar(errorMessage, 'error');
+            } finally {
+                // 送信ボタンを有効化
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'アカウントを作成';
+            }
+        });
+        
+        // スナックバー表示
+        function showSnackbar(message, type) {
+            // 既存のスナックバーを削除
+            const existingSnackbar = document.querySelector('.snackbar');
+            if (existingSnackbar) {
+                existingSnackbar.remove();
+            }
+            
+            // 新しいスナックバーを作成
+            const snackbar = document.createElement('div');
+            snackbar.className = `snackbar snackbar-${type}`;
+            snackbar.textContent = message;
+            snackbar.onclick = () => snackbar.remove();
+            
+            document.body.appendChild(snackbar);
+            
+            // 3秒後に自動削除
+            setTimeout(() => {
+                if (snackbar.parentNode) {
+                    snackbar.remove();
+                }
+            }, 3000);
         }
-
-        ReactDOM.render(React.createElement(InviteAccept), document.getElementById('root'));
     </script>
 </body>
 </html>
