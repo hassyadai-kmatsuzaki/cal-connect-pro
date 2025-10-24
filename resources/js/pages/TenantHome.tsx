@@ -12,11 +12,11 @@ import {
   CalendarMonth,
   Settings,
   Description,
+  Schedule,
   EventAvailable,
   Google,
   TrendingUp,
   People,
-  ContentCopy,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -55,13 +55,6 @@ const TenantHome: React.FC = () => {
       icon: <Description sx={{ fontSize: 40 }} />,
       path: '/hearing-forms',
       color: '#ff9800',
-    },
-    {
-      title: 'テンプレート管理',
-      description: 'メッセージテンプレートの作成・管理',
-      icon: <ContentCopy sx={{ fontSize: 40 }} />,
-      path: '/templates',
-      color: '#9c27b0',
     },
   ];
 

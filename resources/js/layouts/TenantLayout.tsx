@@ -23,6 +23,8 @@ import {
   CalendarMonth,
   Settings,
   Description,
+  Schedule,
+  EventAvailable,
   Logout,
   AdminPanelSettings,
   Person,
@@ -31,7 +33,7 @@ import {
   LocalOffer,
   Assignment,
   PersonAdd,
-  ContentCopy,
+  SmartToy,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -77,7 +79,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ children }) => {
     { text: '流入経路分析', icon: <TrendingUp />, path: '/inflow-analysis' },
     { text: 'ユーザー管理', icon: <People />, path: '/user-management' },
     { text: 'タグ管理', icon: <LocalOffer />, path: '/tag-management' },
-    { text: 'テンプレート管理', icon: <ContentCopy />, path: '/templates' },
+    { text: 'Flexメッセージエディタ', icon: <SmartToy />, path: '/flex-editor' },
     { text: 'LINE連携設定', icon: <Settings />, path: '/line-settings' },
     { text: 'Googleカレンダー連携', icon: <CalendarMonth />, path: '/google-calendar' },
     { text: 'ユーザー招待', icon: <PersonAdd />, path: '/user-invitations' },
