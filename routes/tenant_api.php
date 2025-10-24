@@ -11,6 +11,8 @@ use App\Http\Controllers\Tenant\InflowSourceController;
 use App\Http\Controllers\Tenant\ReservationController;
 use App\Http\Controllers\Tenant\PublicReservationController;
 use App\Http\Controllers\Tenant\WebhookController;
+use App\Http\Controllers\Tenant\UserInvitationController;
+use App\Http\Controllers\Tenant\InvitationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -93,6 +95,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/reservations/{id}/complete', [ReservationController::class, 'complete']);
     Route::post('/reservations/{id}/remind', [ReservationController::class, 'sendReminder']);
     Route::post('/reservations/bulk-remind', [ReservationController::class, 'sendBulkReminders']);
+    
+    // ユーザー招待管理（管理者のみ）
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/user-invitations', [UserInvitationController::class, 'index']);
+        Route::post('/user-invitations', [UserInvitationController::class, 'store']);
+        Route::delete('/user-invitations/{id}', [UserInvitationController::class, 'destroy']);
+        Route::post('/user-invitations/{id}/resend', [UserInvitationController::class, 'resend']);
+    });
 });
 
 // 公開予約API（認証不要）

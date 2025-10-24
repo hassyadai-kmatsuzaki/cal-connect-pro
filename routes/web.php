@@ -6,6 +6,7 @@ use App\Http\Controllers\Central\GoogleCalendarCallbackController;
 use App\Http\Controllers\Central\WebhookController;
 use App\Http\Controllers\Central\LiffController;
 use App\Http\Controllers\Tenant\LiffController as TenantLiffController;
+use App\Http\Controllers\Tenant\InvitationController;
 
 // CSRF Cookie エンドポイント（Sanctum SPA認証用）
 Route::get('/sanctum/csrf-cookie', function () {
@@ -60,6 +61,10 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
         
         return view('booking.index', compact('calendarId', 'lineSetting', 'tenantId'));
     })->name('book');
+    
+    // 招待受信ページ
+    Route::get('/invite/{token}', [InvitationController::class, 'show'])->name('invite.show');
+    Route::post('/invite/accept', [InvitationController::class, 'accept'])->name('invite.accept');
 });
 
 // SPAのフォールバックルート（APIルートは除外）

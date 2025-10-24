@@ -68,6 +68,14 @@ class User extends Authenticatable
     }
 
     /**
+     * 送信した招待
+     */
+    public function sentInvitations(): HasMany
+    {
+        return $this->hasMany(UserInvitation::class, 'invited_by');
+    }
+
+    /**
      * ロール判定
      */
     public function isAdmin(): bool
