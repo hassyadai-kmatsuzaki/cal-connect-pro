@@ -715,6 +715,23 @@
             });
 
             document.getElementById('nextWeek').addEventListener('click', () => {
+                // 日数制限をチェック
+                const maxDaysInAdvance = calendarData.days_in_advance || 30;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                // 次の週の最後の日（6日後）が制限内かチェック
+                const nextWeekEnd = new Date(currentStartDate);
+                nextWeekEnd.setDate(nextWeekEnd.getDate() + 13); // 現在の週の最後 + 7日
+                
+                const daysFromToday = Math.ceil((nextWeekEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (daysFromToday > maxDaysInAdvance) {
+                    // 制限を超える場合は移動しない
+                    showError(`${maxDaysInAdvance}日先までの予約のみ受け付けています`);
+                    return;
+                }
+                
                 currentStartDate.setDate(currentStartDate.getDate() + 7);
                 loadWeekSlots();
                 // 日付移動時にスクロール位置をリセット
@@ -808,9 +825,13 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
+            // カレンダーの日数制限を取得
+            const maxDaysInAdvance = calendarData.days_in_advance || 30;
+            
             for (let i = 0; i < 7; i++) {
                 const date = new Date(currentStartDate);
                 date.setDate(date.getDate() + i);
+                
                 // 日本時間で日付を生成
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -818,7 +839,13 @@
                 const dateStr = `${year}-${month}-${day}`;
                 const dayOfWeek = date.getDay();
                 const isToday = date.getTime() === today.getTime();
+                
+                // 日数制限をチェック
+                const daysFromToday = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                const isWithinLimit = daysFromToday <= maxDaysInAdvance;
+                
                 const hasSlots = weekSlots[dateStr] && weekSlots[dateStr].length > 0;
+                const isAvailable = isWithinLimit && hasSlots;
                 
                 const card = document.createElement('div');
                 card.className = 'date-card';
@@ -826,7 +853,7 @@
                 if (isToday) card.classList.add('today');
                 if (dayOfWeek === 0) card.classList.add('sunday');
                 if (dayOfWeek === 6) card.classList.add('saturday');
-                if (!hasSlots) card.classList.add('disabled');
+                if (!isAvailable) card.classList.add('disabled');
                 
                 card.innerHTML = `
                     <div class="day-name">${dayNames[dayOfWeek]}</div>
@@ -834,8 +861,11 @@
                     <div class="month">${date.getMonth() + 1}月</div>
                 `;
                 
-                if (hasSlots) {
+                if (isAvailable) {
                     card.addEventListener('click', () => selectDate(dateStr));
+                } else if (!isWithinLimit) {
+                    // 日数制限を超えている場合はツールチップを追加
+                    card.title = `${maxDaysInAdvance}日先までの予約のみ受け付けています`;
                 }
                 
                 container.appendChild(card);

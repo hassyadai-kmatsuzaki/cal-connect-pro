@@ -223,52 +223,18 @@ class PublicReservationController extends Controller
         $startDate = $dates->first();
         $endDate = $dates->last();
         
-            \Log::info('Batch processing availability', [
-                'calendar_id' => $calendar->id,
-                'date_range' => $startDate . ' to ' . $endDate,
-                'total_slots' => count($timeSlots),
-                'connected_users_count' => $connectedUsers->count(),
-                'requested_dates' => $dates->toArray(),
-            ]);
-
-        // 全ユーザーの全イベントを一括取得
-        $allEvents = [];
-        foreach ($connectedUsers as $user) {
-            try {
-                $userEvents = $googleCalendarService->getEventsForDateRange(
-                    $user->google_refresh_token,
-                    $user->google_calendar_id,
-                    Carbon::parse($startDate),
-                    Carbon::parse($endDate)
-                );
-                
-                \Log::info('Retrieved events for user', [
-                    'user_id' => $user->id,
-                    'user_name' => $user->name,
-                    'events_count' => count($userEvents),
-                ]);
-                
-                $allEvents = array_merge($allEvents, $userEvents);
-            } catch (\Exception $e) {
-                \Log::error('Failed to get events for user ' . $user->id . ': ' . $e->getMessage());
-            }
-        }
-
-        \Log::info('Total events retrieved', [
-            'total_events' => count($allEvents),
-            'events' => array_map(function($event) {
-                return [
-                    'summary' => $event['summary'] ?? 'No title',
-                    'start' => $event['start']['dateTime'] ?? $event['start']['date'] ?? 'No start time',
-                    'end' => $event['end']['dateTime'] ?? $event['end']['date'] ?? 'No end time',
-                ];
-            }, $allEvents),
+        \Log::info('Batch processing availability', [
+            'calendar_id' => $calendar->id,
+            'date_range' => $startDate . ' to ' . $endDate,
+            'total_slots' => count($timeSlots),
+            'connected_users_count' => $connectedUsers->count(),
+            'requested_dates' => $dates->toArray(),
         ]);
 
         // メモリ上で時間重複チェック
         $slots = [];
         foreach ($timeSlots as $slot) {
-            $isAvailable = true;
+            $isAvailable = false; // デフォルトは予約不可
             
             \Log::info('Processing slot', [
                 'slot_datetime' => $slot['datetime'],
@@ -285,30 +251,75 @@ class PublicReservationController extends Controller
 
             if ($hasReservation) {
                 $isAvailable = false;
+                \Log::info('Slot unavailable due to existing reservation', [
+                    'slot_datetime' => $slot['datetime'],
+                ]);
             } else {
-                    // Google Calendarイベントとの重複チェック
-                    $slotStart = Carbon::parse($slot['datetime']);
-                    $slotEnd = $slotStart->copy()->addMinutes($slot['duration_minutes'] ?? 60);
-                    
-                    foreach ($allEvents as $event) {
-                        $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
-                        $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
+                // 各ユーザーに対して空きをチェック（いずれかのユーザーが空いていれば予約可能）
+                foreach ($connectedUsers as $user) {
+                    try {
+                        $userEvents = $googleCalendarService->getEventsForDateRange(
+                            $user->google_refresh_token,
+                            $user->google_calendar_id,
+                            Carbon::parse($startDate),
+                            Carbon::parse($endDate)
+                        );
                         
-                        // 同じ日付のイベントのみチェック
-                        if ($slotStart->format('Y-m-d') !== $eventStart->format('Y-m-d')) {
-                            continue;
+                        \Log::info('Retrieved events for user', [
+                            'user_id' => $user->id,
+                            'user_name' => $user->name,
+                            'events_count' => count($userEvents),
+                        ]);
+                        
+                        // このユーザーのイベントと時間重複をチェック
+                        $userHasConflict = false;
+                        $slotStart = Carbon::parse($slot['datetime']);
+                        $slotEnd = $slotStart->copy()->addMinutes($slot['duration_minutes'] ?? 60);
+                        
+                        foreach ($userEvents as $event) {
+                            $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
+                            $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
+                            
+                            // 同じ日付のイベントのみチェック
+                            if ($slotStart->format('Y-m-d') !== $eventStart->format('Y-m-d')) {
+                                continue;
+                            }
+                            
+                            // 時間が重複しているかチェック
+                            if ($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd)) {
+                                // 重複なし
+                                continue;
+                            } else {
+                                // 重複あり
+                                $userHasConflict = true;
+                                \Log::info('User has conflict', [
+                                    'user_id' => $user->id,
+                                    'user_name' => $user->name,
+                                    'slot_datetime' => $slot['datetime'],
+                                    'event_summary' => $event['summary'] ?? 'No title',
+                                    'event_start' => $eventStart->format('Y-m-d H:i:s'),
+                                    'event_end' => $eventEnd->format('Y-m-d H:i:s'),
+                                ]);
+                                break;
+                            }
                         }
                         
-                        // 時間が重複しているかチェック
-                        // スロットがイベントの開始時間より前で終了するか、スロットがイベントの終了時間より後で開始する場合は重複なし
-                        if ($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd)) {
-                            // 重複なし
-                            continue;
-                        } else {
-                            // 重複あり
-                            $isAvailable = false;
-                            break;
+                        // このユーザーが空いている場合
+                        if (!$userHasConflict) {
+                            $isAvailable = true; // いずれかのユーザーが空いていれば予約可能
+                            \Log::info('Slot available - user has no conflicts', [
+                                'user_id' => $user->id,
+                                'user_name' => $user->name,
+                                'slot_datetime' => $slot['datetime'],
+                            ]);
+                            break; // 1つのユーザーが空いていれば十分
                         }
+                        
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to get events for user ' . $user->id . ': ' . $e->getMessage());
+                        // エラーの場合はこのユーザーをスキップして次のユーザーをチェック
+                        continue;
+                    }
                 }
             }
 
