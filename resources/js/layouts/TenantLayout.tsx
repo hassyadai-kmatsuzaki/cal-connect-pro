@@ -74,19 +74,20 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ children }) => {
   const adminMenuItems = [
     { text: 'カレンダー一覧', icon: <CalendarMonth />, path: '/calendars' },
     { text: '予約管理', icon: <Assignment />, path: '/reservations' },
-    { text: 'LINE連携設定', icon: <Settings />, path: '/line-settings' },
     { text: 'ヒアリングフォーム', icon: <Description />, path: '/hearing-forms' },
     { text: '流入経路分析', icon: <TrendingUp />, path: '/inflow-analysis' },
     { text: 'ユーザー管理', icon: <People />, path: '/user-management' },
     { text: 'タグ管理', icon: <LocalOffer />, path: '/tag-management' },
+    { text: 'LINE連携設定', icon: <Settings />, path: '/line-settings' },
+    { text: 'Googleカレンダー連携', icon: <CalendarMonth />, path: '/google-calendar' },
     { text: 'ユーザー招待', icon: <PersonAdd />, path: '/user-invitations' },
   ];
 
   // User用メニュー
   const userMenuItems = [
     { text: 'Googleカレンダー連携', icon: <CalendarMonth />, path: '/google-calendar' },
-    { text: '休日・受付時間設定', icon: <Schedule />, path: '/availability' },
-    { text: '予定確認', icon: <EventAvailable />, path: '/reservations' },
+    // { text: '休日・受付時間設定', icon: <Schedule />, path: '/availability' },
+    // { text: '予定確認', icon: <EventAvailable />, path: '/reservations' },
   ];
 
   const menuItems = user?.role === 'admin' ? adminMenuItems : userMenuItems;

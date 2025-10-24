@@ -40,9 +40,18 @@
         } = MaterialUI;
         
         // CSRFトークンの設定
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
-        axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) {
+            axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+            axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+        }
+        
+        // CSRF Cookieを取得
+        axios.get('/sanctum/csrf-cookie').then(() => {
+            console.log('CSRF cookie set');
+        }).catch(error => {
+            console.error('Failed to set CSRF cookie:', error);
+        });
         
         function InviteAccept() {
             const [loading, setLoading] = useState(false);
@@ -92,11 +101,20 @@
 
                 setSaving(true);
                 try {
+                    // CSRFトークンを再取得
+                    const currentCsrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    
                     const response = await axios.post('/invite/accept', {
                         token,
                         password: formData.password,
                         password_confirmation: formData.password_confirmation,
                         terms_accepted: formData.terms_accepted,
+                    }, {
+                        headers: {
+                            'X-CSRF-TOKEN': currentCsrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json',
+                        }
                     });
 
                     setSnackbar({
@@ -169,7 +187,10 @@
                                     variant: 'h6', 
                                     gutterBottom: true
                                 }, '招待内容'),
-                                React.createElement(Stack, { key: 'info-stack', spacing: 2 }, [
+                                React.createElement(Stack, { 
+                                    key: 'info-stack', 
+                                    style: { gap: 16 }
+                                }, [
                                     React.createElement(Box, { key: 'name' }, [
                                         React.createElement(Typography, { 
                                             variant: 'body2', 
@@ -227,7 +248,10 @@
                                 gutterBottom: true
                             }, 'アカウント作成'),
                             
-                            React.createElement(Stack, { key: 'form', spacing: 3 }, [
+                            React.createElement(Stack, { 
+                                key: 'form', 
+                                style: { gap: 24 }
+                            }, [
                                 React.createElement(TextField, {
                                     key: 'password',
                                     label: 'パスワード',
