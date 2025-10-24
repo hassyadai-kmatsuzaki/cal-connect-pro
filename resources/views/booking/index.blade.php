@@ -802,8 +802,10 @@
             document.getElementById('submitButton').addEventListener('click', submitReservation);
         }
 
-        // Load available slots for the week
+        // Load available slots for the week (最適化版)
         async function loadWeekSlots() {
+            const startTime = performance.now();
+            
             try {
                 document.getElementById('loadingCalendar').classList.remove('hidden');
                 document.getElementById('timeSlotsContainer').classList.add('hidden');
@@ -820,7 +822,7 @@
                 
                 const daysFromToday = Math.ceil((weekEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                 
-                console.log('Load week slots check:', {
+                console.log('🚀 Load week slots check:', {
                     currentStartDate: currentStartDate.toDateString(),
                     weekEnd: weekEnd.toDateString(),
                     daysFromToday: daysFromToday,
@@ -844,9 +846,10 @@
                 endDate.setDate(endDate.getDate() + 6);
                 const endDateStr = formatDateForAPI(endDate);
                 
-                console.log('Loading slots for week:', startDate, 'to', endDateStr);
+                console.log('📅 Loading slots for week:', startDate, 'to', endDateStr);
                 
-                // 1回のAPIコールで週全体の空き枠を取得
+                // 1回のAPIコールで週全体の空き枠を取得（最適化版）
+                const apiStartTime = performance.now();
                 const response = await fetch(`${apiBasePath}/calendars/${calendarId}/available-slots?start_date=${startDate}&end_date=${endDateStr}`, {
                     method: 'GET',
                     headers: {
@@ -854,16 +857,23 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
+                const apiEndTime = performance.now();
+                
+                console.log(`⚡ API call completed in ${(apiEndTime - apiStartTime).toFixed(2)}ms`);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
                 }
                 
                 const data = await response.json();
-                console.log('Available slots response:', data);
+                console.log('📊 Available slots response:', data);
                 
                 if (data.success && data.slots) {
+                    // 日付ごとにグループ化（最適化版）
                     weekSlots = {};
+                    const processingStartTime = performance.now();
+                    
                     data.slots.forEach(slot => {
                         // datetimeフィールドから日付部分を抽出（"2025-10-24 14:30:00" → "2025-10-24"）
                         const dateStr = slot.datetime.split(' ')[0];
@@ -873,19 +883,42 @@
                         weekSlots[dateStr].push(slot);
                     });
                     
-                    console.log('Processed week slots:', weekSlots);
+                    const processingEndTime = performance.now();
+                    console.log(`🔄 Data processing completed in ${(processingEndTime - processingStartTime).toFixed(2)}ms`);
+                    console.log('📋 Processed week slots:', weekSlots);
                 } else {
                     throw new Error(data.message || 'Failed to load available slots');
                 }
                 
+                // 日付カードの描画
+                const renderStartTime = performance.now();
                 renderDateCards();
+                const renderEndTime = performance.now();
+                console.log(`🎨 Date cards rendered in ${(renderEndTime - renderStartTime).toFixed(2)}ms`);
+                
                 document.getElementById('loadingCalendar').classList.add('hidden');
+                
+                const totalTime = performance.now() - startTime;
+                console.log(`✅ Week slots loaded successfully in ${totalTime.toFixed(2)}ms`);
                 
                 // 最初の利用可能な日を自動選択
                 autoSelectFirstAvailableDate();
+                
             } catch (error) {
-                console.error('Error loading week slots:', error);
-                showError('空き時間の取得に失敗しました: ' + error.message);
+                const errorTime = performance.now() - startTime;
+                console.error(`❌ Error loading week slots after ${errorTime.toFixed(2)}ms:`, error);
+                
+                // エラーの種類に応じた処理
+                if (error.message.includes('HTTP error! status: 422')) {
+                    showError('日付の形式が正しくありません');
+                } else if (error.message.includes('HTTP error! status: 404')) {
+                    showError('カレンダーが見つかりません');
+                } else if (error.message.includes('HTTP error! status: 500')) {
+                    showError('サーバーエラーが発生しました。しばらくしてから再度お試しください');
+                } else {
+                    showError(error.message || '空き時間の取得に失敗しました');
+                }
+                
                 document.getElementById('loadingCalendar').classList.add('hidden');
             }
         }

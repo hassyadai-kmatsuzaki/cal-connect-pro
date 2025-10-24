@@ -207,25 +207,47 @@ class PublicReservationController extends Controller
         // 日付ごとにグループ化
         $slotsByDate = collect($timeSlots)->groupBy('date');
         
-        // Google Calendarイベントを一括取得
+        // Google Calendarイベントを一括取得（最適化版）
         $googleCalendarService = new GoogleCalendarService();
         $userEventsCache = [];
         
+        // 日付範囲の開始と終了を計算
+        $dateKeys = $slotsByDate->keys()->toArray();
+        $rangeStart = Carbon::parse(min($dateKeys))->startOfDay();
+        $rangeEnd = Carbon::parse(max($dateKeys))->endOfDay();
+        
+        \Log::info('Batch Google Calendar API optimization', [
+            'users_count' => $connectedUsers->count(),
+            'date_range_start' => $rangeStart->format('Y-m-d'),
+            'date_range_end' => $rangeEnd->format('Y-m-d'),
+            'total_dates' => count($dateKeys),
+            'api_calls_before' => $connectedUsers->count() * count($dateKeys),
+            'api_calls_after' => $connectedUsers->count(),
+        ]);
+        
         foreach ($connectedUsers as $user) {
-            foreach ($slotsByDate->keys() as $date) {
-                try {
-                    $dateStart = Carbon::parse($date)->startOfDay();
-                    $dateEnd = Carbon::parse($date)->endOfDay();
-                    
-                    $userEventsCache[$user->id][$date] = $googleCalendarService->getEventsForDateRange(
-                        $user->google_refresh_token,
-                        $user->google_calendar_id,
-                        $dateStart,
-                        $dateEnd
-                    );
-                } catch (\Exception $e) {
-                    $userEventsCache[$user->id][$date] = [];
-                }
+            try {
+                // 日付範囲で一括取得（1回のAPI呼び出し）
+                $userEventsCache[$user->id] = $googleCalendarService->getEventsForDateRange(
+                    $user->google_refresh_token,
+                    $user->google_calendar_id,
+                    $rangeStart,
+                    $rangeEnd
+                );
+                
+                \Log::info('Google Calendar events fetched for user', [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'events_count' => count($userEventsCache[$user->id]),
+                ]);
+                
+            } catch (\Exception $e) {
+                \Log::error('Failed to fetch Google Calendar events for user', [
+                    'user_id' => $user->id,
+                    'user_name' => $user->name,
+                    'error' => $e->getMessage(),
+                ]);
+                $userEventsCache[$user->id] = [];
             }
         }
 
@@ -239,22 +261,9 @@ class PublicReservationController extends Controller
                 $allUsersAvailable = true;
                 
                 foreach ($connectedUsers as $user) {
-                    $userEvents = $userEventsCache[$user->id][$slot['date']] ?? [];
+                    $userEvents = $userEventsCache[$user->id] ?? [];
                     
-                    $hasConflict = false;
-                    $slotStart = Carbon::parse($slot['datetime']);
-                    $slotEnd = $slotStart->copy()->addMinutes($slot['duration_minutes']);
-                    
-                    foreach ($userEvents as $event) {
-                        $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
-                        $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
-                        
-                        if ($slotStart->format('Y-m-d') === $eventStart->format('Y-m-d') &&
-                            !($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd))) {
-                            $hasConflict = true;
-                            break;
-                        }
-                    }
+                    $hasConflict = $this->checkTimeSlotConflict($slot, $userEvents);
                     
                     if ($hasConflict) {
                         $allUsersAvailable = false;
@@ -266,22 +275,9 @@ class PublicReservationController extends Controller
             } else {
                 // いずれかのユーザーが空いていれば予約可能（デフォルト: any）
                 foreach ($connectedUsers as $user) {
-                    $userEvents = $userEventsCache[$user->id][$slot['date']] ?? [];
+                    $userEvents = $userEventsCache[$user->id] ?? [];
                     
-                    $hasConflict = false;
-                    $slotStart = Carbon::parse($slot['datetime']);
-                    $slotEnd = $slotStart->copy()->addMinutes($slot['duration_minutes']);
-                    
-                    foreach ($userEvents as $event) {
-                        $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
-                        $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
-                        
-                        if ($slotStart->format('Y-m-d') === $eventStart->format('Y-m-d') &&
-                            !($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd))) {
-                            $hasConflict = true;
-                            break;
-                        }
-                    }
+                    $hasConflict = $this->checkTimeSlotConflict($slot, $userEvents);
                     
                     if (!$hasConflict) {
                         $isAvailable = true;
@@ -299,6 +295,28 @@ class PublicReservationController extends Controller
         }
 
         return $availableSlots;
+    }
+
+    /**
+     * 時間枠の競合をチェック
+     */
+    private function checkTimeSlotConflict(array $slot, array $userEvents): bool
+    {
+        $slotStart = Carbon::parse($slot['datetime']);
+        $slotEnd = $slotStart->copy()->addMinutes($slot['duration_minutes']);
+        
+        foreach ($userEvents as $event) {
+            $eventStart = Carbon::parse($event['start']['dateTime'] ?? $event['start']['date']);
+            $eventEnd = Carbon::parse($event['end']['dateTime'] ?? $event['end']['date']);
+            
+            // 同じ日付で時間が重複しているかチェック
+            if ($slotStart->format('Y-m-d') === $eventStart->format('Y-m-d') &&
+                !($slotEnd->lte($eventStart) || $slotStart->gte($eventEnd))) {
+                return true; // 競合あり
+            }
+        }
+        
+        return false; // 競合なし
     }
 
     /**
