@@ -23,13 +23,13 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import { useDrop } from 'react-dnd';
-import { FlexMessage, FlexComponent, DragItem } from '../../resources/js/types/flexMessage';
+import { FlexMessage, FlexComponent, DragItem } from '../../types/flexMessage';
 import { 
   findComponentById, 
   removeComponentById, 
   addComponentToParent,
   deepCloneComponent 
-} from '../../resources/js/utils/flexMessageUtils';
+} from '../../utils/flexMessageUtils';
 import FlexComponentRenderer from './FlexComponentRenderer';
 
 interface FlexCanvasProps {

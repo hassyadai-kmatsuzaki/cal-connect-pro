@@ -98,7 +98,7 @@ export const createDefaultFlexMessage = (): FlexMessage => {
           weight: 'regular'
         }
       ],
-      paddingAll: '20px',
+      paddingAll: 'xs',
       backgroundColor: '#ffffff'
     }
   };
@@ -110,7 +110,7 @@ export const createDefaultBox = (): FlexComponent => {
     type: 'box',
     layout: 'vertical',
     contents: [],
-    paddingAll: '10px',
+    paddingAll: 'xs',
     backgroundColor: '#ffffff'
   };
 };
@@ -146,7 +146,7 @@ export const createDefaultButton = (text: string = 'Button'): FlexComponent => {
       label: text,
       data: 'button_clicked'
     },
-    style: 'primary',
+    style: 'normal',
     color: '#ffffff',
     height: 'sm'
   };
