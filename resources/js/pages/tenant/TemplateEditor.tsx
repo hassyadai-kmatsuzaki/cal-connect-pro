@@ -129,6 +129,18 @@ const TemplateEditor: React.FC = () => {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
 
+  // 新しい状態変数を追加
+  const [flexMessage, setFlexMessage] = useState<FlexMessage>({
+    type: 'bubble',
+    header: undefined,
+    hero: undefined,
+    body: undefined,
+    footer: undefined,
+  });
+  const [flowSteps, setFlowSteps] = useState<FlowStep[]>([]);
+  const [previewData, setPreviewData] = useState<FlexMessage | FlowStep[] | null>(null);
+  const [previewType, setPreviewType] = useState<'flex' | 'flow'>('flex');
+
   const categories = [
     '案内',
     '確認',
@@ -375,6 +387,30 @@ const TemplateEditor: React.FC = () => {
     });
   };
 
+  // Flexメッセージエディタ用のハンドラー
+  const handleFlexMessageChange = (message: FlexMessage) => {
+    setFlexMessage(message);
+  };
+
+  const handleFlexPreview = (message: FlexMessage) => {
+    setPreviewData(message);
+    setPreviewType('flex');
+  };
+
+  // フロー設計用のハンドラー
+  const handleFlowStepsChange = (steps: FlowStep[]) => {
+    setFlowSteps(steps);
+  };
+
+  const handleFlowPreview = (steps: FlowStep[]) => {
+    setPreviewData(steps);
+    setPreviewType('flow');
+  };
+
+  const handleClosePreview = () => {
+    setPreviewData(null);
+  };
+
   const renderStepContent = (step: number) => {
     switch (step) {
       case 0:
@@ -493,14 +529,11 @@ const TemplateEditor: React.FC = () => {
                       )}
                       
                       {step.type === 'flex' && (
-                        <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            Flexメッセージエディタは実装中です
-                          </Typography>
-                          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                            現在のFlexコンテンツ: {JSON.stringify(step.content).substring(0, 100)}...
-                          </Typography>
-                        </Box>
+                        <FlexMessageEditor
+                          value={flexMessage}
+                          onChange={handleFlexMessageChange}
+                          onPreview={handleFlexPreview}
+                        />
                       )}
                     </CardContent>
                   </Card>
@@ -512,14 +545,11 @@ const TemplateEditor: React.FC = () => {
 
       case 2:
         return (
-          <Box>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              フロー設定
-            </Typography>
-            <Alert severity="info">
-              フロー設定機能は実装中です。条件分岐とタグ操作の設定が可能になります。
-            </Alert>
-          </Box>
+          <FlowDesigner
+            steps={flowSteps}
+            onStepsChange={handleFlowStepsChange}
+            onPreview={handleFlowPreview}
+          />
         );
 
       case 3:
@@ -719,6 +749,15 @@ const TemplateEditor: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* プレビューダイアログ */}
+        {previewData && (
+          <MessagePreview
+            type={previewType}
+            data={previewData}
+            onClose={handleClosePreview}
+          />
+        )}
 
         {/* スナックバー */}
         <Snackbar
