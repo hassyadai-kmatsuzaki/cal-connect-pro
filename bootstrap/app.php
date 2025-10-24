@@ -45,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant' => \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
             'universal' => \Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain::class,
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

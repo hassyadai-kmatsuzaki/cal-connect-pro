@@ -65,13 +65,22 @@ const LineSettings: React.FC = () => {
 
   const fetchSettings = async () => {
     try {
+      // まず現在のテナントIDを取得
+      let currentTenantId = null;
+      try {
+        const meResponse = await axios.get('/api/me');
+        currentTenantId = meResponse.data.tenant_id;
+        setTenantId(currentTenantId);
+      } catch (error) {
+        console.warn('テナントIDの取得に失敗:', error);
+        // フォールバック: ホスト名から推測
+        const fallbackTenantId = window.location.hostname.split('.')[0];
+        setTenantId(fallbackTenantId);
+        currentTenantId = fallbackTenantId;
+      }
+
       const response = await axios.get('/api/line-settings');
       const data = response.data.data as LineSettingData | null;
-      
-      // テナントIDを取得（APIレスポンスから、または現在のURLから）
-      const currentTenantId = data?.webhook_url?.split('/').pop() || 
-                              window.location.hostname.split('.')[0];
-      setTenantId(currentTenantId);
       
       if (data) {
         setSettings({
@@ -158,7 +167,7 @@ const LineSettings: React.FC = () => {
       setConnectedAt(response.data.data.connected_at);
       setWebhookUrl(response.data.data.webhook_url);
       
-      // テナントIDを更新
+      // テナントIDを更新（APIレスポンスから）
       const updatedTenantId = response.data.data.webhook_url?.split('/').pop();
       if (updatedTenantId) {
         setTenantId(updatedTenantId);
