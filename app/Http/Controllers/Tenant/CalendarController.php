@@ -69,8 +69,8 @@ class CalendarController extends Controller
             'type' => 'required|in:any,all',
             'accept_days' => 'required|array',
             'accept_days.*' => 'in:月,火,水,木,金,土,日,祝日',
-            'start_time' => 'required|regex:/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/',
-            'end_time' => 'required|regex:/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/',
+            'start_time' => 'required|date_format:H:i:s',
+            'end_time' => 'required|date_format:H:i:s',
             'display_interval' => 'required|integer|min:5|max:120',
             'event_duration' => 'required|integer|min:5|max:480',
             'days_in_advance' => 'required|integer|min:1|max:365',
@@ -100,9 +100,9 @@ class CalendarController extends Controller
             'type.required' => 'タイプは必須です',
             'accept_days.required' => '受付曜日は必須です',
             'start_time.required' => '開始時間は必須です',
-            'start_time.regex' => '開始時間はHH:MMまたはHH:MM:SS形式で入力してください（例：10:00 または 10:00:00）',
+            'start_time.date_format' => '開始時間はHH:MM:SS形式で入力してください（例：10:00:00）',
             'end_time.required' => '終了時間は必須です',
-            'end_time.regex' => '終了時間はHH:MMまたはHH:MM:SS形式で入力してください（例：19:00 または 19:00:00）',
+            'end_time.date_format' => '終了時間はHH:MM:SS形式で入力してください（例：19:00:00）',
         ]);
 
         if ($validator->fails()) {
@@ -191,8 +191,8 @@ class CalendarController extends Controller
             'type' => 'required|in:any,all',
             'accept_days' => 'required|array',
             'accept_days.*' => 'in:月,火,水,木,金,土,日,祝日',
-            'start_time' => 'required|regex:/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/',
-            'end_time' => 'required|regex:/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/',
+            'start_time' => 'required|date_format:H:i:s',
+            'end_time' => 'required|date_format:H:i:s',
             'display_interval' => 'required|integer|min:5|max:120',
             'event_duration' => 'required|integer|min:5|max:480',
             'days_in_advance' => 'required|integer|min:1|max:365',
@@ -222,9 +222,9 @@ class CalendarController extends Controller
             'type.required' => 'タイプは必須です',
             'accept_days.required' => '受付曜日は必須です',
             'start_time.required' => '開始時間は必須です',
-            'start_time.regex' => '開始時間はHH:MMまたはHH:MM:SS形式で入力してください（例：10:00 または 10:00:00）',
+            'start_time.date_format' => '開始時間はHH:MM:SS形式で入力してください（例：10:00:00）',
             'end_time.required' => '終了時間は必須です',
-            'end_time.regex' => '終了時間はHH:MMまたはHH:MM:SS形式で入力してください（例：19:00 または 19:00:00）',
+            'end_time.date_format' => '終了時間はHH:MM:SS形式で入力してください（例：19:00:00）',
         ]);
 
         if ($validator->fails()) {
