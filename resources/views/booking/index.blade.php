@@ -851,7 +851,8 @@
                 if (data.success && data.slots) {
                     weekSlots = {};
                     data.slots.forEach(slot => {
-                        const dateStr = slot.datetime.split('T')[0];
+                        // datetimeフィールドから日付部分を抽出（"2025-10-24 14:30:00" → "2025-10-24"）
+                        const dateStr = slot.datetime.split(' ')[0];
                         if (!weekSlots[dateStr]) {
                             weekSlots[dateStr] = [];
                         }
@@ -946,7 +947,17 @@
                 });
                 
                 const hasSlots = weekSlots[dateStr] && weekSlots[dateStr].length > 0;
-                const isAvailable = isWithinLimit && hasSlots;
+                const hasAvailableSlots = hasSlots && weekSlots[dateStr].some(slot => slot.is_available);
+                const isAvailable = isWithinLimit && hasAvailableSlots;
+                
+                console.log('Slot availability check:', {
+                    dateStr: dateStr,
+                    hasSlots: hasSlots,
+                    hasAvailableSlots: hasAvailableSlots,
+                    isWithinLimit: isWithinLimit,
+                    isAvailable: isAvailable,
+                    slots: weekSlots[dateStr] || []
+                });
                 
                 const card = document.createElement('div');
                 card.className = 'date-card';
