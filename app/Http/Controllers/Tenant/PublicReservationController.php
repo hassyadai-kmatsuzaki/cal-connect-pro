@@ -524,7 +524,7 @@ class PublicReservationController extends Controller
                 ->where('google_calendar_connected', true)
                 ->whereNotNull('google_refresh_token')
                 ->whereNotNull('google_calendar_id')
-                ->where('id', '!=', $assignedUser->id) // アサインされたユーザー以外
+                ->where('users.id', '!=', $assignedUser->id) // アサインされたユーザー以外
                 ->get();
             
             \Log::info('Connected users for invitation', [
