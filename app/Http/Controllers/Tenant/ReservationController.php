@@ -478,6 +478,7 @@ class ReservationController extends Controller
                             'id' => $user->id,
                             'name' => $user->name,
                             'email' => $user->email,
+                            'google_calendar_id' => $user->google_calendar_id,
                         ];
                     })->toArray(),
                 ]);
