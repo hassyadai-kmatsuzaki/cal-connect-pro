@@ -20,11 +20,6 @@ class LiffController extends Controller
      */
     public function login(Request $request)
     {
-        \Log::info('LIFF login request received', [
-            'request_data' => $request->all(),
-            'tenant_id' => tenant('id'),
-        ]);
-
         $validator = Validator::make($request->all(), [
             'line_user_id' => 'required|string',
             'display_name' => 'required|string',
@@ -33,10 +28,6 @@ class LiffController extends Controller
         ]);
 
         if ($validator->fails()) {
-            \Log::error('LIFF login validation failed', [
-                'errors' => $validator->errors(),
-                'request_data' => $request->all(),
-            ]);
             return response()->json([
                 'message' => 'バリデーションエラー',
                 'errors' => $validator->errors(),
@@ -44,15 +35,6 @@ class LiffController extends Controller
         }
 
         try {
-            \Log::info('Attempting to create/update LineUser', [
-                'line_user_id' => $request->line_user_id,
-                'display_name' => $request->display_name,
-                'picture_url' => $request->picture_url,
-                'status_message' => $request->status_message,
-                'tenant_id' => tenant('id'),
-            ]);
-            
-            // line_usersテーブルにレコードがなければ新規作成、あれば更新
             $lineUser = LineUser::updateOrCreate(
                 ['line_user_id' => $request->line_user_id],
                 [
@@ -64,25 +46,12 @@ class LiffController extends Controller
                 ]
             );
 
-            \Log::info('LIFF login successful', [
-                'line_user_id' => $lineUser->line_user_id,
-                'display_name' => $lineUser->display_name,
-                'tenant_id' => tenant('id'),
-            ]);
-
             return response()->json([
                 'data' => $lineUser,
                 'message' => 'ログイン成功',
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('LIFF login failed: ' . $e->getMessage(), [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all(),
-                'tenant_id' => tenant('id'),
-            ]);
-            
             return response()->json([
                 'message' => 'ログインに失敗しました',
                 'error' => $e->getMessage(),
@@ -95,11 +64,6 @@ class LiffController extends Controller
      */
     public function trackInflow(Request $request)
     {
-        \Log::info('LIFF track inflow request received', [
-            'request_data' => $request->all(),
-            'tenant_id' => tenant('id'),
-        ]);
-
         $validator = Validator::make($request->all(), [
             'source' => 'required|string',
             'line_user_id' => 'required|string',
@@ -110,10 +74,6 @@ class LiffController extends Controller
         ]);
 
         if ($validator->fails()) {
-            \Log::error('LIFF track inflow validation failed', [
-                'errors' => $validator->errors(),
-                'request_data' => $request->all(),
-            ]);
             return response()->json([
                 'message' => 'バリデーションエラー',
                 'errors' => $validator->errors(),
@@ -121,7 +81,6 @@ class LiffController extends Controller
         }
 
         try {
-            // LINEユーザー情報を取得（LIFFから送信されたアクセストークンを使用）
             $lineUserId = $request->line_user_id;
             
             if (!$lineUserId) {
@@ -133,7 +92,6 @@ class LiffController extends Controller
             $lineUser = LineUser::where('line_user_id', $lineUserId)->first();
             
             if (!$lineUser) {
-                // LINEユーザーが存在しない場合は作成
                 $lineUser = LineUser::create([
                     'line_user_id' => $lineUserId,
                     'display_name' => $request->display_name,
@@ -142,13 +100,7 @@ class LiffController extends Controller
                     'is_active' => true,
                     'followed_at' => now(),
                 ]);
-                
-                \Log::info('LineUser created for tracking', [
-                    'line_user_id' => $lineUserId,
-                    'tenant_id' => tenant('id'),
-                ]);
             } else {
-                // 既存のLINEユーザー情報を更新
                 $lineUser->update([
                     'display_name' => $request->display_name,
                     'picture_url' => $request->picture_url,
@@ -157,26 +109,13 @@ class LiffController extends Controller
                 ]);
             }
             
-            // 流入経路を特定
             $inflowSource = \App\Models\InflowSource::where('source_key', $request->source)
                 ->where('is_active', true)
                 ->first();
             
             if ($inflowSource) {
-                // 流入経路を更新
                 $lineUser->update(['inflow_source_id' => $inflowSource->id]);
                 $inflowSource->increment('views');
-                
-                \Log::info('Inflow tracked successfully', [
-                    'line_user_id' => $lineUser->line_user_id,
-                    'inflow_source_id' => $inflowSource->id,
-                    'tenant_id' => tenant('id'),
-                ]);
-            } else {
-                \Log::warning('InflowSource not found', [
-                    'source_key' => $request->source,
-                    'tenant_id' => tenant('id'),
-                ]);
             }
 
             return response()->json([
@@ -184,13 +123,6 @@ class LiffController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('LIFF track inflow failed: ' . $e->getMessage(), [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all(),
-                'tenant_id' => tenant('id'),
-            ]);
-            
             return response()->json([
                 'message' => '流入経路の追跡に失敗しました',
                 'error' => $e->getMessage(),
