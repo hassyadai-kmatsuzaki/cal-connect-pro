@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         
         // CSRF Token validation for web routes
         $middleware->validateCsrfTokens(except: [
+            '/invite/*',
             '/api/*',              // すべてのAPIルートを除外
             '/api/admin/*',
             '/api/line/webhook',
