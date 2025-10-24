@@ -44,13 +44,21 @@ class LiffController extends Controller
         }
 
         try {
+            \Log::info('Attempting to create/update LineUser', [
+                'line_user_id' => $request->line_user_id,
+                'display_name' => $request->display_name,
+                'picture_url' => $request->picture_url,
+                'status_message' => $request->status_message,
+                'tenant_id' => tenant('id'),
+            ]);
+            
             // line_usersテーブルにレコードがなければ新規作成、あれば更新
             $lineUser = LineUser::updateOrCreate(
                 ['line_user_id' => $request->line_user_id],
                 [
                     'display_name' => $request->display_name,
-                    'picture_url' => $request->picture_url,
-                    'status_message' => $request->status_message,
+                    'picture_url' => $request->picture_url ?? null,
+                    'status_message' => $request->status_message ?? null,
                     'is_active' => true,
                     'last_login_at' => now(),
                 ]
@@ -654,13 +662,6 @@ class LiffController extends Controller
                         'event_response' => $eventResponse,
                     ]);
                 }
-            } else {
-                \Log::error('Failed to create Google Calendar event for LIFF', [
-                    'reservation_id' => $reservation->id,
-                    'assigned_user_id' => $assignedUser->id,
-                    'event_response' => $eventResponse,
-                ]);
-            }
         } catch (\Exception $e) {
             \Log::error('Failed to create Google Calendar event for LIFF reservation: ' . $e->getMessage(), [
                 'reservation_id' => $reservation->id,
