@@ -78,7 +78,7 @@ interface Reservation {
     answer_text: string;
     hearingFormItem: {
       id: number;
-      question: string;
+      label: string;
       type: string;
     };
   }>;
@@ -470,7 +470,7 @@ const ReservationDetail: React.FC = () => {
                     {reservation.answers.map((answer) => (
                       <Box key={answer.id} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
                         <Typography variant="body2" color="text.secondary" gutterBottom>
-                          {answer.hearingFormItem.question}
+                          {answer.hearingFormItem?.label || '質問項目'}
                         </Typography>
                         <Typography variant="body1">
                           {answer.answer_text}
