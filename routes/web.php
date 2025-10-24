@@ -19,6 +19,12 @@ Route::get('/api/google-calendar/callback', [GoogleCalendarCallbackController::c
 // LINE Webhook（中央ドメイン）
 Route::post('/api/line/webhook/{tenant_id}', [WebhookController::class, 'handle']);
 
+// テナントドメイン用の招待受信ページ（テナントコンテキストが既に初期化されている）
+Route::middleware([\Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class])->group(function () {
+    Route::get('/invite/{token}', [InvitationController::class, 'show'])->name('tenant.invite.show');
+    Route::post('/invite/accept', [InvitationController::class, 'accept'])->name('tenant.invite.accept');
+});
+
 // セントラルドメイン経由のLIFF ページ（テナントIDパラメーターでテナントを特定）
 Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group(function () {
     // LIFF用のページ
@@ -65,8 +71,8 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
         return view('booking.index', compact('calendarId', 'lineSetting', 'tenantId'));
     })->name('book');
     
-    // 招待受信ページ
-    Route::get('/invite/{token}', [InvitationController::class, 'show'])->name('invite.show');
+    // 招待受信ページ（セントラルドメイン経由）
+    Route::get('/invite/{tenant_id}/{token}', [InvitationController::class, 'show'])->name('invite.show');
     Route::post('/invite/accept', [InvitationController::class, 'accept'])->name('invite.accept');
 });
 

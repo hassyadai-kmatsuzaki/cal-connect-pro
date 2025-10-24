@@ -43,15 +43,16 @@ class InviteUserMail extends Mailable
 
     private function getInviteUrl(): string
     {
-        $domain = request()->getHost();
-        $subdomain = explode('.', $domain)[0];
+        $currentTenantId = tenant('id');
         
-        // テナントドメインの場合
-        if (str_contains($domain, '.anken.cloud')) {
-            return "https://{$subdomain}.anken.cloud/invite/{$this->invitation->token}";
+        // 現在のテナントIDからドメインを取得
+        $tenant = \App\Models\Tenant::find($currentTenantId);
+        if ($tenant && $tenant->domains()->exists()) {
+            $domain = $tenant->domains()->first()->domain;
+            return "https://{$domain}/invite/{$this->invitation->token}";
         }
         
-        // セントラルドメインの場合
-        return "https://anken.cloud/invite/" . tenant('id') . "/{$this->invitation->token}";
+        // フォールバック: セントラルドメイン経由
+        return "https://anken.cloud/invite/{$currentTenantId}/{$this->invitation->token}";
     }
 }
