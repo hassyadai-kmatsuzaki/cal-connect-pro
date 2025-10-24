@@ -169,18 +169,46 @@ const CalendarDetail: React.FC = () => {
     }
   };
 
-  const copyBookingUrl = () => {
+  const copyBookingUrl = async () => {
     if (!calendar) return;
     
-    // 正しいLIFF URLを生成（セントラルドメイン経由）
-    const tenantId = window.location.hostname.split('.')[0]; // サブドメインからテナントIDを取得
-    const bookingUrl = `https://anken.cloud/book/${tenantId}/${calendar.id}`;
-    navigator.clipboard.writeText(bookingUrl);
-    setSnackbar({
-      open: true,
-      message: '予約URLをコピーしました',
-      severity: 'success',
-    });
+    try {
+      // LINE設定からLIFF IDを取得
+      const lineSettingsResponse = await axios.get('/api/line-settings');
+      const lineSettings = lineSettingsResponse.data.data;
+      
+      if (lineSettings && lineSettings.liff_id) {
+        // LIFF URLを生成
+        const liffUrl = `https://liff.line.me/${lineSettings.liff_id}?route=booking&calendar=${calendar.id}`;
+        navigator.clipboard.writeText(liffUrl);
+        setSnackbar({
+          open: true,
+          message: 'LIFF予約URLをコピーしました',
+          severity: 'success',
+        });
+      } else {
+        // フォールバック: セントラルドメイン経由
+        const tenantId = window.location.hostname.split('.')[0];
+        const bookingUrl = `https://anken.cloud/book/${tenantId}/${calendar.id}`;
+        navigator.clipboard.writeText(bookingUrl);
+        setSnackbar({
+          open: true,
+          message: '予約URLをコピーしました（LIFF未設定）',
+          severity: 'success',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to get LINE settings:', error);
+      // エラー時のフォールバック
+      const tenantId = window.location.hostname.split('.')[0];
+      const bookingUrl = `https://anken.cloud/book/${tenantId}/${calendar.id}`;
+      navigator.clipboard.writeText(bookingUrl);
+      setSnackbar({
+        open: true,
+        message: '予約URLをコピーしました',
+        severity: 'success',
+      });
+    }
   };
 
   if (loading) {

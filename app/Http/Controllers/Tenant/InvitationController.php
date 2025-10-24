@@ -21,36 +21,39 @@ class InvitationController extends Controller
         $invitation = UserInvitation::where('token', $token)->first();
 
         if (!$invitation) {
-            return response()->json([
-                'message' => '無効な招待リンクです',
-            ], 404);
+            return view('errors.invitation', [
+                'error' => '無効な招待リンクです',
+                'errorType' => 'invalid'
+            ]);
         }
 
         if (!$invitation->isValid()) {
             if ($invitation->accepted_at) {
-                return response()->json([
-                    'message' => 'この招待は既に使用されています',
-                ], 422);
+                return view('errors.invitation', [
+                    'error' => 'この招待は既に使用されています',
+                    'errorType' => 'used'
+                ]);
             } else {
-                return response()->json([
-                    'message' => 'この招待は期限切れです',
-                ], 422);
+                return view('errors.invitation', [
+                    'error' => 'この招待は期限切れです',
+                    'errorType' => 'expired'
+                ]);
             }
         }
 
         // 既存ユーザーチェック
         $existingUser = User::where('email', $invitation->email)->first();
         if ($existingUser) {
-            return response()->json([
-                'message' => 'このメールアドレスは既に登録されています',
-            ], 422);
+            return view('errors.invitation', [
+                'error' => 'このメールアドレスは既に登録されています',
+                'errorType' => 'exists'
+            ]);
         }
 
-        return response()->json([
-            'data' => [
-                'invitation' => $invitation->load('inviter'),
-                'tenant_name' => tenant('company_name'),
-            ],
+        return view('invite-accept', [
+            'invitation' => $invitation->load('inviter'),
+            'tenantName' => tenant('company_name'),
+            'token' => $token,
         ]);
     }
 
