@@ -20,6 +20,7 @@ class LineUser extends Model
         'inflow_source_id',
         'added_at',
         'last_message_at',
+        'last_login_at',
         'is_blocked',
         'is_active',
         'followed_at',
@@ -28,6 +29,7 @@ class LineUser extends Model
     protected $casts = [
         'added_at' => 'datetime',
         'last_message_at' => 'datetime',
+        'last_login_at' => 'datetime',
         'is_blocked' => 'boolean',
         'is_active' => 'boolean',
         'followed_at' => 'datetime',
