@@ -231,6 +231,9 @@ class PublicReservationController extends Controller
             $currentTime->addMinutes($intervalMinutes);
         }
         
+        // Google Calendar連携ユーザーを取得して実際の空き枠をチェック
+        $slots = $this->getActualAvailability($calendar, $timeSlots);
+        
         return $slots;
     }
 
