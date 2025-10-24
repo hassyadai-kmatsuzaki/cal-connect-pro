@@ -25,6 +25,8 @@ import ReservationDetail from './pages/tenant/ReservationDetail';
 import ReservationForm from './pages/tenant/ReservationForm';
 import UserInvitationManagement from './pages/tenant/UserInvitationManagement';
 import InviteAccept from './pages/tenant/InviteAccept';
+import TemplateManagement from './pages/tenant/TemplateManagement';
+import TemplateEditor from './pages/tenant/TemplateEditor';
 
 const App: React.FC = () => {
   const isCentral = isCentralDomain();
@@ -141,6 +143,30 @@ const App: React.FC = () => {
               element={
                 <PrivateRoute>
                   <UserInvitationManagement />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/templates/create"
+              element={
+                <PrivateRoute>
+                  <TemplateEditor />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/templates/:id/edit"
+              element={
+                <PrivateRoute>
+                  <TemplateEditor />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/templates"
+              element={
+                <PrivateRoute>
+                  <TemplateManagement />
                 </PrivateRoute>
               }
             />
