@@ -25,7 +25,6 @@ import ReservationDetail from './pages/tenant/ReservationDetail';
 import ReservationForm from './pages/tenant/ReservationForm';
 import UserInvitationManagement from './pages/tenant/UserInvitationManagement';
 import InviteAccept from './pages/tenant/InviteAccept';
-import FlexEditorPage from './pages/tenant/FlexEditorPage';
 
 const App: React.FC = () => {
   const isCentral = isCentralDomain();
@@ -174,14 +173,6 @@ const App: React.FC = () => {
               element={
                 <PrivateRoute>
                   <ReservationManagement />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/flex-editor"
-              element={
-                <PrivateRoute>
-                  <FlexEditorPage />
                 </PrivateRoute>
               }
             />
