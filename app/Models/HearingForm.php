@@ -20,6 +20,7 @@ class HearingForm extends Model
         'total_responses',
         'slack_notify',
         'slack_webhook',
+        'form_completion_message',
         'is_active',
     ];
 

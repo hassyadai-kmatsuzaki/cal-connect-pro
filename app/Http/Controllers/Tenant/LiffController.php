@@ -998,6 +998,9 @@ class LiffController extends Controller
                 $this->sendFormSlackNotification($formResponse, $form, $lineUser);
             }
 
+            // LINE完了メッセージを送信
+            $this->sendFormCompletionMessage($lineUser, $form, $formResponse);
+
             return response()->json([
                 'data' => $formResponse,
                 'message' => 'フォームの回答を送信しました',
@@ -1143,5 +1146,55 @@ class LiffController extends Controller
         } catch (\Exception $e) {
             \Log::error('Failed to send form Slack notification: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * フォーム完了メッセージをLINEに送信
+     */
+    private function sendFormCompletionMessage($lineUser, $form, $formResponse)
+    {
+        try {
+            // 完了メッセージが設定されていない場合は送信しない
+            if (empty($form->form_completion_message)) {
+                return;
+            }
+
+            $lineMessagingService = new LineMessagingService();
+            
+            // プレースホルダーを置換
+            $message = $this->buildFormCompletionMessage($form->form_completion_message, $lineUser, $form, $formResponse);
+            
+            $lineMessagingService->sendMessage($lineUser->line_user_id, $message);
+            
+            \Log::info('Form completion message sent', [
+                'line_user_id' => $lineUser->line_user_id,
+                'form_id' => $form->id,
+                'form_response_id' => $formResponse->id,
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to send form completion message: ' . $e->getMessage(), [
+                'line_user_id' => $lineUser->line_user_id,
+                'form_id' => $form->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * フォーム完了メッセージを構築
+     */
+    private function buildFormCompletionMessage(string $template, $lineUser, $form, $formResponse): string
+    {
+        $replacements = [
+            '{{user_name}}' => $lineUser->display_name,
+            '{{form_name}}' => $form->name,
+            '{{submitted_at}}' => $formResponse->submitted_at ? $formResponse->submitted_at->format('Y年m月d日 H:i') : now()->format('Y年m月d日 H:i'),
+            // 下位互換性のため、古いプレースホルダーもサポート
+            '{user_name}' => $lineUser->display_name,
+            '{form_name}' => $form->name,
+        ];
+        
+        return str_replace(array_keys($replacements), array_values($replacements), $template);
     }
 }
