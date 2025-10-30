@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Tenant\AuthController;
+use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\LineSettingController;
 use App\Http\Controllers\Tenant\TagController;
 use App\Http\Controllers\Tenant\CalendarController;
@@ -35,6 +36,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    
+    // ダッシュボード統計
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
     
     // LINE設定管理
     Route::get('/line-settings', [LineSettingController::class, 'show']);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -7,6 +7,7 @@ import {
   CardContent,
   CardActionArea,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   CalendarMonth,
@@ -21,6 +22,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import TenantLayout from '../layouts/TenantLayout';
+import axios from 'axios';
 
 interface QuickAccessCard {
   title: string;
@@ -30,9 +32,18 @@ interface QuickAccessCard {
   color: string;
 }
 
+interface DashboardStats {
+  this_month_reservations: number;
+  this_month_new_customers: number;
+  this_week_reservations: number;
+  active_calendars: number;
+}
+
 const TenantHome: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const adminCards: QuickAccessCard[] = [
     {
@@ -84,6 +95,34 @@ const TenantHome: React.FC = () => {
 
   const cards = user?.role === 'admin' ? adminCards : userCards;
 
+  // 統計データを取得（管理者のみ）
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      fetchStats();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/dashboard/stats');
+      setStats(response.data.data);
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+      // エラーの場合は0で初期化
+      setStats({
+        this_month_reservations: 0,
+        this_month_new_customers: 0,
+        this_week_reservations: 0,
+        active_calendars: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <TenantLayout>
       <Box>
@@ -100,69 +139,79 @@ const TenantHome: React.FC = () => {
             : 'Googleカレンダーと連携して、予約受付時間を管理できます。'}
         </Alert>
 
-        {/* 統計情報カード（将来的に実装） */}
+        {/* 統計情報カード */}
         {user?.role === 'admin' && (
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <TrendingUp color="primary" sx={{ mr: 1 }} />
-                    <Typography variant="body2" color="text.secondary">
-                      今月の予約数
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    42
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <People color="success" sx={{ mr: 1 }} />
-                    <Typography variant="body2" color="text.secondary">
-                      新規顧客
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    12
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <EventAvailable color="warning" sx={{ mr: 1 }} />
-                    <Typography variant="body2" color="text.secondary">
-                      今週の予約
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    8
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <CalendarMonth color="error" sx={{ mr: 1 }} />
-                    <Typography variant="body2" color="text.secondary">
-                      連携カレンダー
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                    3
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+            {loading ? (
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              </Grid>
+            ) : (
+              <>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <TrendingUp color="primary" sx={{ mr: 1 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          今月の予約数
+                        </Typography>
+                      </Box>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {stats?.this_month_reservations ?? 0}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <People color="success" sx={{ mr: 1 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          新規顧客
+                        </Typography>
+                      </Box>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {stats?.this_month_new_customers ?? 0}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <EventAvailable color="warning" sx={{ mr: 1 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          今週の予約
+                        </Typography>
+                      </Box>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {stats?.this_week_reservations ?? 0}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <CalendarMonth color="error" sx={{ mr: 1 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          連携カレンダー
+                        </Typography>
+                      </Box>
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {stats?.active_calendars ?? 0}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </>
+            )}
           </Grid>
         )}
 
