@@ -74,5 +74,21 @@ class InflowSource extends Model
         }
         return round(($this->conversions / $this->views) * 100, 2);
     }
+
+    /**
+     * メッセージテンプレート
+     */
+    public function messageTemplates()
+    {
+        return $this->morphMany(MessageTemplate::class, 'templatable');
+    }
+
+    /**
+     * フォーム送信
+     */
+    public function formSubmissions(): HasMany
+    {
+        return $this->hasMany(FormSubmission::class);
+    }
 }
 

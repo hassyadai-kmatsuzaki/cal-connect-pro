@@ -35,5 +35,21 @@ class HearingForm extends Model
     {
         return $this->hasMany(Calendar::class);
     }
+
+    /**
+     * メッセージテンプレート
+     */
+    public function messageTemplates()
+    {
+        return $this->morphMany(MessageTemplate::class, 'templatable');
+    }
+
+    /**
+     * フォーム送信
+     */
+    public function formSubmissions(): HasMany
+    {
+        return $this->hasMany(FormSubmission::class);
+    }
 }
 

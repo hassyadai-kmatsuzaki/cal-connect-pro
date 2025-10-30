@@ -177,4 +177,68 @@ class LineMessagingService
             return false;
         }
     }
+
+    /**
+     * メッセージテンプレートを送信
+     */
+    public function sendTemplate(string $userId, \App\Models\MessageTemplate $template, array $data = []): bool
+    {
+        try {
+            $messages = $template->buildMessages($data);
+            
+            if (empty($messages)) {
+                Log::warning('No messages to send from template', [
+                    'template_id' => $template->id,
+                    'user_id' => $userId,
+                ]);
+                return false;
+            }
+
+            return $this->sendMessages($userId, $messages);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send template message: ' . $e->getMessage(), [
+                'template_id' => $template->id,
+                'user_id' => $userId,
+                'data' => $data,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * 構築済みメッセージ配列を送信
+     */
+    public function sendMessages(string $userId, array $messages): bool
+    {
+        try {
+            $response = $this->client->post('https://api.line.me/v2/bot/message/push', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $this->channelAccessToken,
+                    'Content-Type' => 'application/json',
+                ],
+                'json' => [
+                    'to' => $userId,
+                    'messages' => $messages,
+                ],
+            ]);
+
+            Log::info('LINE messages sent successfully', [
+                'user_id' => $userId,
+                'message_count' => count($messages),
+                'status_code' => $response->getStatusCode(),
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send LINE messages: ' . $e->getMessage(), [
+                'user_id' => $userId,
+                'messages' => $messages,
+            ]);
+
+            return false;
+        }
+    }
 }

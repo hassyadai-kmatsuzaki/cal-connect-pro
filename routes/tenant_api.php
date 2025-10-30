@@ -13,6 +13,8 @@ use App\Http\Controllers\Tenant\PublicReservationController;
 use App\Http\Controllers\Tenant\WebhookController;
 use App\Http\Controllers\Tenant\UserInvitationController;
 use App\Http\Controllers\Tenant\InvitationController;
+use App\Http\Controllers\MessageTemplateController;
+use App\Http\Controllers\FormController;
 
 /*
 |--------------------------------------------------------------------------
@@ -103,6 +105,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/user-invitations/{id}', [UserInvitationController::class, 'destroy']);
         Route::post('/user-invitations/{id}/resend', [UserInvitationController::class, 'resend']);
     });
+    
+    // メッセージテンプレート管理
+    Route::prefix('message-templates')->group(function () {
+        Route::get('/', [MessageTemplateController::class, 'index']);
+        Route::post('/', [MessageTemplateController::class, 'store']);
+        Route::get('/{template}', [MessageTemplateController::class, 'show']);
+        Route::put('/{template}', [MessageTemplateController::class, 'update']);
+        Route::delete('/{template}', [MessageTemplateController::class, 'destroy']);
+        Route::post('/{template}/preview', [MessageTemplateController::class, 'preview']);
+        Route::post('/upload-image', [MessageTemplateController::class, 'uploadImage']);
+    });
+    
+    // フォーム送信履歴管理
+    Route::prefix('hearing-forms/{form}')->group(function () {
+        Route::get('/submissions', [FormController::class, 'submissions']);
+        Route::get('/settings', [FormController::class, 'getSettings']);
+        Route::put('/settings', [FormController::class, 'updateSettings']);
+    });
+    
+    Route::get('/form-submissions/{submission}', [FormController::class, 'submissionDetail']);
 });
 
 // 公開予約API（認証不要）
@@ -111,6 +133,12 @@ Route::prefix('public')->group(function () {
     Route::get('/calendars/{id}/available-slots', [PublicReservationController::class, 'getAvailableSlots']);
     Route::post('/calendars/{id}/reservations', [PublicReservationController::class, 'createReservation']);
     Route::post('/reservations/{id}/cancel', [PublicReservationController::class, 'cancelReservation']);
+});
+
+// フォーム公開API（LIFF用・認証不要）
+Route::prefix('forms')->group(function () {
+    Route::get('/{form}', [FormController::class, 'show']);
+    Route::post('/{form}/submit', [FormController::class, 'submit']);
 });
 
 // LINE Webhook（認証不要）

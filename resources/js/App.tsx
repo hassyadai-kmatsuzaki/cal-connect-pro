@@ -25,6 +25,9 @@ import ReservationDetail from './pages/tenant/ReservationDetail';
 import ReservationForm from './pages/tenant/ReservationForm';
 import UserInvitationManagement from './pages/tenant/UserInvitationManagement';
 import InviteAccept from './pages/tenant/InviteAccept';
+import MessageTemplates from './pages/tenant/MessageTemplates';
+import FormSubmissions from './pages/tenant/FormSubmissions';
+import HearingFormSettings from './pages/tenant/HearingFormSettings';
 
 const App: React.FC = () => {
   const isCentral = isCentralDomain();
@@ -109,6 +112,30 @@ const App: React.FC = () => {
               element={
                 <PrivateRoute>
                   <HearingForms />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hearing-forms/:formId/submissions"
+              element={
+                <PrivateRoute>
+                  <FormSubmissions />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hearing-forms/:formId/settings"
+              element={
+                <PrivateRoute>
+                  <HearingFormSettings />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/message-templates"
+              element={
+                <PrivateRoute>
+                  <MessageTemplates />
                 </PrivateRoute>
               }
             />
