@@ -118,7 +118,7 @@ class WebhookController extends Controller
             }
 
             // ウェルカムメッセージを送信
-            $this->sendWelcomeMessage($userId, $inflowSource);
+            $this->sendWelcomeMessage($userId, $lineUser, $inflowSource);
 
             Log::info('User followed successfully', [
                 'user_id' => $userId,
@@ -385,7 +385,7 @@ class WebhookController extends Controller
     /**
      * ウェルカムメッセージを送信
      */
-    private function sendWelcomeMessage(string $userId, ?\App\Models\InflowSource $inflowSource = null)
+    private function sendWelcomeMessage(string $userId, \App\Models\LineUser $lineUser, ?\App\Models\InflowSource $inflowSource = null)
     {
         try {
             $lineMessagingService = new LineMessagingService();
@@ -394,14 +394,18 @@ class WebhookController extends Controller
             if ($inflowSource && $inflowSource->enable_welcome_message && $inflowSource->welcome_message) {
                 $message = $inflowSource->welcome_message;
                 
-                // プレースホルダーを置換
-                $message = str_replace('{{user_name}}', 'LINEユーザー', $message);
+                // プレースホルダーを置換（実際のdisplay_nameを使用）
+                $displayName = $lineUser->display_name ?: 'LINEユーザー';
+                $message = str_replace('{{user_name}}', $displayName, $message);
+                $message = str_replace('{user_name}', $displayName, $message); // 後方互換性のため
                 $message = str_replace('{{inflow_source_name}}', $inflowSource->name, $message);
+                $message = str_replace('{inflow_source_name}', $inflowSource->name, $message); // 後方互換性のため
                 
                 $lineMessagingService->sendMessage($userId, $message);
                 
                 Log::info('Custom welcome message sent', [
                     'user_id' => $userId,
+                    'display_name' => $displayName,
                     'inflow_source_id' => $inflowSource->id,
                     'message' => $message,
                 ]);
@@ -411,12 +415,14 @@ class WebhookController extends Controller
                 
                 Log::info('Default welcome message sent', [
                     'user_id' => $userId,
+                    'display_name' => $lineUser->display_name,
                 ]);
             }
 
         } catch (\Exception $e) {
             Log::error('Failed to send welcome message: ' . $e->getMessage(), [
                 'user_id' => $userId,
+                'display_name' => $lineUser->display_name ?? 'unknown',
                 'inflow_source_id' => $inflowSource?->id,
             ]);
         }
