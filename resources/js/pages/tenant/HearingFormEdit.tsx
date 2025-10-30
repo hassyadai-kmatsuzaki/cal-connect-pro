@@ -62,9 +62,6 @@ const HearingFormEdit: React.FC = () => {
     name: '',
     description: '',
     items: [] as FormItem[],
-    settings: {
-      completion_message: '',
-    },
     slack_notify: false,
     slack_webhook: '',
     form_completion_message: '',
@@ -98,7 +95,6 @@ const HearingFormEdit: React.FC = () => {
         name: form.name,
         description: form.description || '',
         items: form.items || [],
-        settings: form.settings || { completion_message: '' },
         slack_notify: form.slack_notify || false,
         slack_webhook: form.slack_webhook || '',
         form_completion_message: form.form_completion_message || '',
@@ -349,30 +345,6 @@ const HearingFormEdit: React.FC = () => {
                   </List>
                 </Paper>
               )}
-            </CardContent>
-          </Card>
-
-          {/* 設定 */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                設定
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Stack spacing={2}>
-                <TextField
-                  label="送信完了メッセージ"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={formData.settings.completion_message}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    settings: { ...formData.settings, completion_message: e.target.value }
-                  })}
-                />
-              </Stack>
             </CardContent>
           </Card>
 

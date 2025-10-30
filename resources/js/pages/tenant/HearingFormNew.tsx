@@ -61,12 +61,9 @@ const HearingFormNew: React.FC = () => {
     name: '',
     description: '',
     items: [] as FormItem[],
-    settings: {
-      completion_message: 'ご回答ありがとうございました。\n内容を確認後、ご連絡させていただきます。',
-    },
     slack_notify: false,
     slack_webhook: '',
-    form_completion_message: 'ご回答ありがとうございました。\n内容を確認後、ご連絡させていただきます。',
+    form_completion_message: '{{user_name}}様\n\nご回答ありがとうございました。\n内容を確認後、ご連絡させていただきます。',
   });
   
   const [fieldData, setFieldData] = useState<FormItem>({
@@ -310,31 +307,6 @@ const HearingFormNew: React.FC = () => {
                   </List>
                 </Paper>
               )}
-            </CardContent>
-          </Card>
-
-          {/* 設定 */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                設定
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <Stack spacing={2}>
-                <TextField
-                  label="送信完了メッセージ"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={formData.settings.completion_message}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    settings: { ...formData.settings, completion_message: e.target.value }
-                  })}
-                  helperText="フォーム送信後にユーザーに表示されるメッセージ"
-                />
-              </Stack>
             </CardContent>
           </Card>
 

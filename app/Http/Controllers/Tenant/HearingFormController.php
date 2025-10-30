@@ -81,9 +81,9 @@ class HearingFormController extends Controller
             'items.*.placeholder' => 'nullable|string|max:255',
             'items.*.help_text' => 'nullable|string|max:500',
             'settings' => 'nullable|array',
-            'settings.completion_message' => 'nullable|string',
             'slack_notify' => 'boolean',
             'slack_webhook' => 'nullable|string|url',
+            'form_completion_message' => 'nullable|string',
         ], [
             'name.required' => 'フォーム名は必須です',
             'items.required' => 'フォーム項目は必須です',
@@ -117,6 +117,7 @@ class HearingFormController extends Controller
                 'settings' => $request->settings,
                 'slack_notify' => $request->slack_notify ?? false,
                 'slack_webhook' => $request->slack_webhook,
+                'form_completion_message' => $request->form_completion_message,
                 'is_active' => true,
             ]);
 
@@ -182,9 +183,9 @@ class HearingFormController extends Controller
             'items.*.placeholder' => 'nullable|string|max:255',
             'items.*.help_text' => 'nullable|string|max:500',
             'settings' => 'nullable|array',
-            'settings.completion_message' => 'nullable|string',
             'slack_notify' => 'boolean',
             'slack_webhook' => 'nullable|string|url',
+            'form_completion_message' => 'nullable|string',
         ], [
             'name.required' => 'フォーム名は必須です',
             'items.required' => 'フォーム項目は必須です',
@@ -208,6 +209,7 @@ class HearingFormController extends Controller
                 'settings' => $request->settings,
                 'slack_notify' => $request->slack_notify ?? false,
                 'slack_webhook' => $request->slack_webhook,
+                'form_completion_message' => $request->form_completion_message,
             ]);
 
             // 既存の項目を削除

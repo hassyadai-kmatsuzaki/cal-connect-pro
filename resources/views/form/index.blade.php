@@ -47,7 +47,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
                 <h2 class="text-2xl font-bold text-green-800 mb-2">送信完了</h2>
-                <p id="completion-message" class="text-green-700 whitespace-pre-line"></p>
+                <p class="text-green-700 whitespace-pre-line">ご回答ありがとうございました。<br>LINEに確認メッセージを送信しました。</p>
             </div>
         </div>
     </div>
@@ -306,7 +306,6 @@
                 // 成功メッセージを表示
                 document.getElementById('form-container').classList.add('hidden');
                 document.getElementById('success').classList.remove('hidden');
-                document.getElementById('completion-message').textContent = result.data.completion_message;
 
             } catch (error) {
                 console.error('送信エラー:', error);

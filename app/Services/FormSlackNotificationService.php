@@ -116,7 +116,7 @@ class FormSlackNotificationService
         // 詳細URLを追加
         $detailUrl = $this->getDetailUrl($hearingForm->id, $formResponse->id);
         $message .= "\n────────────────────────────\n";
-        $message .= "📊 <{$detailUrl}|回答詳細を見る>";
+        // $message .= "📊 <{$detailUrl}|回答詳細を見る>";
 
         return $message;
     }
