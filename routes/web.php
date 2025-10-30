@@ -62,6 +62,22 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
         
         return view('booking.index', compact('calendarId', 'lineSetting', 'tenantId'));
     })->name('book');
+    
+    // フォーム回答ページ
+    Route::get('/form/{tenant_id}/{formKey}', function ($tenantId, $formKey) {
+        // InitializeTenancyByParamミドルウェアでテナントコンテキストが初期化されている
+        $lineSetting = \App\Models\LineSetting::first();
+        
+        // デバッグ用ログ
+        \Log::info('LIFF form page accessed', [
+            'tenant_id' => $tenantId,
+            'form_key' => $formKey,
+            'line_setting_exists' => $lineSetting ? true : false,
+            'liff_id' => $lineSetting ? $lineSetting->liff_id : null,
+        ]);
+        
+        return view('form.index', compact('formKey', 'lineSetting', 'tenantId'));
+    })->name('form');
 });
 
 // SPAのフォールバックルート（APIルートは除外）

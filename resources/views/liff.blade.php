@@ -117,6 +117,8 @@
                 const slug = getQueryParam('slug');
                 const source = getQueryParam('source');
                 const formId = getQueryParam('id');
+                const form = getQueryParam('form');
+                const calendar = getQueryParam('calendar');
                 const tenantId = "{{ $tenantId }}";
                 
                 if (!liff.isLoggedIn()) {
@@ -126,6 +128,8 @@
                     if (slug) params.append('slug', slug);
                     if (source) params.append('source', source);
                     if (formId) params.append('id', formId);
+                    if (form) params.append('form', form);
+                    if (calendar) params.append('calendar', calendar);
                     
                     const redirectUri = `${window.location.origin}${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
                     
@@ -171,9 +175,17 @@
                         redirectUrl = friendAddUrl;
                         break;
                     case 'booking':
-                        // slugが指定されている場合は使用、なければデフォルトのカレンダーID（1）を使用
-                        const calendarId = slug || '1';
+                        // calendarパラメータまたはslugを使用
+                        const calendarId = calendar || slug || '1';
                         redirectUrl = `/book/${tenantId}/${calendarId}`;
+                        break;
+                    case 'form':
+                        // フォーム回答ページ
+                        if (!form) {
+                            showError('formパラメータが指定されていません');
+                            return;
+                        }
+                        redirectUrl = `/form/${tenantId}/${form}`;
                         break;
                     case 'inflow':
                         if (!slug) {
