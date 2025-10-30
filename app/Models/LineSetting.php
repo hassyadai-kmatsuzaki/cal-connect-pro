@@ -25,9 +25,9 @@ class LineSetting extends Model
         'connected_at' => 'datetime',
     ];
 
-    protected $hidden = [
-        'channel_secret',
-        'channel_access_token',
-    ];
+    // protected $hidden = [
+    //     'channel_secret',
+    //     'channel_access_token',
+    // ];
 }
 

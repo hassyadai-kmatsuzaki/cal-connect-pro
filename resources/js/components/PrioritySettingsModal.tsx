@@ -236,28 +236,33 @@ const PrioritySettingsModal: React.FC<PrioritySettingsModalProps> = ({
                       </Typography>
                     </Box>
 
-                    <FormControl size="small" sx={{ minWidth: 120 }}>
-                      <InputLabel>優先度</InputLabel>
-                      <Select
-                        value={user.priority}
-                        label="優先度"
-                        onChange={(e) =>
-                          handleUpdatePriority(user.id, Number(e.target.value))
+                    <TextField
+                      type="number"
+                      label="優先度"
+                      value={user.priority}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        if (value >= 1 && value <= 100) {
+                          handleUpdatePriority(user.id, value);
                         }
-                        disabled={saving}
-                      >
-                        {Array.from({ length: 10 }, (_, i) => (i + 1) * 10).map((val) => (
-                          <MenuItem key={val} value={val}>
-                            {val}
-                          </MenuItem>
-                        ))}
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
-                          <MenuItem key={val} value={val}>
-                            {val}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                      }}
+                      onBlur={(e) => {
+                        const value = Number(e.target.value);
+                        if (value < 1) {
+                          handleUpdatePriority(user.id, 1);
+                        } else if (value > 100) {
+                          handleUpdatePriority(user.id, 100);
+                        }
+                      }}
+                      disabled={saving}
+                      size="small"
+                      sx={{ width: 100 }}
+                      inputProps={{
+                        min: 1,
+                        max: 100,
+                        step: 1,
+                      }}
+                    />
 
                     <IconButton
                       color="error"
@@ -301,26 +306,33 @@ const PrioritySettingsModal: React.FC<PrioritySettingsModalProps> = ({
                   </Select>
                 </FormControl>
 
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <InputLabel>優先度</InputLabel>
-                  <Select
-                    value={newPriority}
-                    label="優先度"
-                    onChange={(e) => setNewPriority(Number(e.target.value))}
-                    disabled={saving}
-                  >
-                    {Array.from({ length: 10 }, (_, i) => (i + 1) * 10).map((val) => (
-                      <MenuItem key={val} value={val}>
-                        {val}
-                      </MenuItem>
-                    ))}
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
-                      <MenuItem key={val} value={val}>
-                        {val}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <TextField
+                  type="number"
+                  label="優先度"
+                  value={newPriority}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    if (value >= 1 && value <= 100) {
+                      setNewPriority(value);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const value = Number(e.target.value);
+                    if (value < 1) {
+                      setNewPriority(1);
+                    } else if (value > 100) {
+                      setNewPriority(100);
+                    }
+                  }}
+                  disabled={saving}
+                  size="small"
+                  sx={{ width: 100 }}
+                  inputProps={{
+                    min: 1,
+                    max: 100,
+                    step: 1,
+                  }}
+                />
 
                 <Button
                   variant="contained"
