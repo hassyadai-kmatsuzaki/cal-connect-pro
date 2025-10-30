@@ -10,6 +10,7 @@ use App\Models\ReservationAnswer;
 use App\Models\User;
 use App\Services\GoogleCalendarService;
 use App\Services\SlackNotificationService;
+use App\Services\AssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -403,15 +404,10 @@ class PublicReservationController extends Controller
                 }
             }
             
-            // 指定された時間枠で空いているユーザーを取得
-            $availableUsers = $this->getAvailableUsersForSlot(
-                $calendar, 
-                $request->reservation_datetime, 
-                $calendar->event_duration ?? 60
-            );
-            
-            // 空いているユーザーからランダムに1人を選択
-            $assignedUser = $this->selectRandomAvailableUser($availableUsers);
+            // 優先度に基づいて担当者を選定
+            $assignmentService = new AssignmentService();
+            $datetime = new \DateTime($request->reservation_datetime);
+            $assignedUser = $assignmentService->assignUser($calendar, $datetime);
             
             if (!$assignedUser) {
                 return response()->json([

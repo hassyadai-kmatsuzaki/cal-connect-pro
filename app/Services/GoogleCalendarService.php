@@ -533,4 +533,54 @@ class GoogleCalendarService
             return false;
         }
     }
+
+    /**
+     * 指定日時にイベントがあるかチェック
+     */
+    public function hasEventAt($user, \DateTime $datetime, int $duration): bool
+    {
+        try {
+            // ユーザーがGoogle連携していない場合
+            if (!$user->google_refresh_token || !$user->google_calendar_id) {
+                return false;
+            }
+
+            // アクセストークンを取得
+            $accessToken = $this->getAccessToken($user->google_refresh_token);
+            
+            // チェックする時間範囲
+            $startTime = $datetime->format('Y-m-d\TH:i:s\Z');
+            $endTime = clone $datetime;
+            $endTime->modify("+{$duration} minutes");
+            $endTimeStr = $endTime->format('Y-m-d\TH:i:s\Z');
+            
+            // Googleカレンダーからイベントを取得
+            $response = $this->client->get("https://www.googleapis.com/calendar/v3/calendars/{$user->google_calendar_id}/events", [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $accessToken,
+                ],
+                'query' => [
+                    'timeMin' => $startTime,
+                    'timeMax' => $endTimeStr,
+                    'singleEvents' => 'true',
+                ],
+            ]);
+            
+            $responseData = json_decode($response->getBody(), true);
+            $events = $responseData['items'] ?? [];
+            
+            // イベントがあればtrue
+            return count($events) > 0;
+            
+        } catch (\Exception $e) {
+            \Log::error('GoogleCalendarService: Failed to check event', [
+                'user_id' => $user->id,
+                'datetime' => $datetime->format('Y-m-d H:i:s'),
+                'error' => $e->getMessage(),
+            ]);
+            
+            // エラーの場合は安全側に倒して、イベントありとする
+            return true;
+        }
+    }
 }

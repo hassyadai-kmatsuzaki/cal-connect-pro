@@ -355,7 +355,7 @@ class CalendarController extends Controller
     /**
      * ユーザー一覧を取得（カレンダー作成時の選択肢用）
      */
-    public function getUsers()
+    public function getAllUsers()
     {
         $users = User::select('id', 'name', 'email', 'google_calendar_connected')
             ->get();
@@ -376,6 +376,145 @@ class CalendarController extends Controller
 
         return response()->json([
             'data' => $forms,
+        ]);
+    }
+
+    /**
+     * カレンダーの担当者一覧を取得（優先度付き）
+     */
+    public function getUsers($id)
+    {
+        $calendar = Calendar::find($id);
+
+        if (!$calendar) {
+            return response()->json([
+                'message' => 'カレンダーが見つかりません',
+            ], 404);
+        }
+
+        $users = $calendar->users()
+            ->orderBy('calendar_users.priority', 'desc')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'priority' => $user->pivot->priority,
+                ];
+            });
+
+        return response()->json([
+            'data' => $users,
+        ]);
+    }
+
+    /**
+     * カレンダーに担当者を追加
+     */
+    public function addUser(Request $request, $id)
+    {
+        $calendar = Calendar::find($id);
+
+        if (!$calendar) {
+            return response()->json([
+                'message' => 'カレンダーが見つかりません',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'priority' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'バリデーションエラー',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $priority = $request->priority ?? 1;
+
+        // 既に紐づいているかチェック
+        if ($calendar->users()->where('user_id', $request->user_id)->exists()) {
+            return response()->json([
+                'message' => 'この担当者は既に紐づいています',
+            ], 409);
+        }
+
+        $calendar->users()->attach($request->user_id, ['priority' => $priority]);
+
+        return response()->json([
+            'message' => '担当者を追加しました',
+            'data' => [
+                'calendar_id' => $calendar->id,
+                'user_id' => $request->user_id,
+                'priority' => $priority,
+            ],
+        ]);
+    }
+
+    /**
+     * 担当者の優先度を更新
+     */
+    public function updateUserPriority(Request $request, $calendarId, $userId)
+    {
+        $calendar = Calendar::find($calendarId);
+
+        if (!$calendar) {
+            return response()->json([
+                'message' => 'カレンダーが見つかりません',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'priority' => 'required|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'バリデーションエラー',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // 紐づいているかチェック
+        if (!$calendar->users()->where('user_id', $userId)->exists()) {
+            return response()->json([
+                'message' => 'この担当者は紐づいていません',
+            ], 404);
+        }
+
+        $calendar->users()->updateExistingPivot($userId, ['priority' => $request->priority]);
+
+        return response()->json([
+            'message' => '優先度を更新しました',
+            'data' => [
+                'calendar_id' => $calendarId,
+                'user_id' => $userId,
+                'priority' => $request->priority,
+            ],
+        ]);
+    }
+
+    /**
+     * カレンダーから担当者を削除
+     */
+    public function removeUser($calendarId, $userId)
+    {
+        $calendar = Calendar::find($calendarId);
+
+        if (!$calendar) {
+            return response()->json([
+                'message' => 'カレンダーが見つかりません',
+            ], 404);
+        }
+
+        $calendar->users()->detach($userId);
+
+        return response()->json([
+            'message' => '担当者を削除しました',
         ]);
     }
 }

@@ -9,6 +9,7 @@ use App\Models\Calendar;
 use App\Models\InflowSource;
 use App\Services\LineMessagingService;
 use App\Services\SlackNotificationService;
+use App\Services\AssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -237,15 +238,10 @@ class LiffController extends Controller
             // ヒアリングフォームがない場合はLINE名を使用
             $customerName = $lineUser->display_name ?: 'LINEユーザー';
 
-            // 指定された時間枠で空いているユーザーを取得
-            $availableUsers = $this->getAvailableUsersForSlot(
-                $calendar, 
-                $request->reservation_datetime, 
-                $durationMinutes
-            );
-            
-            // 空いているユーザーからランダムに1人を選択
-            $assignedUser = $this->selectRandomAvailableUser($availableUsers);
+            // 優先度に基づいて担当者を選定
+            $assignmentService = new AssignmentService();
+            $datetime = new \DateTime($request->reservation_datetime);
+            $assignedUser = $assignmentService->assignUser($calendar, $datetime);
             
             if (!$assignedUser) {
                 return response()->json([

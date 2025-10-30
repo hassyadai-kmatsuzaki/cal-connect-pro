@@ -19,6 +19,8 @@ import {
   Tooltip,
   CircularProgress,
   Snackbar,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -34,9 +36,11 @@ import {
   People,
   Notifications,
   FilterList,
+  LowPriority as PriorityIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import TenantLayout from '../../layouts/TenantLayout';
+import PrioritySettingsModal from '../../components/PrioritySettingsModal';
 import axios from 'axios';
 
 interface Calendar {
@@ -74,6 +78,8 @@ const CalendarList: React.FC = () => {
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
+  const [priorityModalOpen, setPriorityModalOpen] = useState(false);
+  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
 
   // カレンダー一覧を取得
   useEffect(() => {
@@ -142,6 +148,17 @@ const CalendarList: React.FC = () => {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const handleOpenPriorityModal = (calendar: Calendar) => {
+    setSelectedCalendar(calendar);
+    setPriorityModalOpen(true);
+    handleMenuClose(calendar.id);
+  };
+
+  const handleClosePriorityModal = () => {
+    setPriorityModalOpen(false);
+    setSelectedCalendar(null);
   };
 
   const filteredCalendars = calendars
@@ -331,20 +348,34 @@ const CalendarList: React.FC = () => {
                         onClose={() => handleMenuClose(calendar.id)}
                       >
                         <MenuItem onClick={() => { handleView(calendar.id); handleMenuClose(calendar.id); }}>
-                          <VisibilityIcon fontSize="small" sx={{ mr: 1 }} />
-                          詳細を見る
+                          <ListItemIcon>
+                            <VisibilityIcon fontSize="small" />
+                          </ListItemIcon>
+                          <ListItemText>詳細を見る</ListItemText>
+                        </MenuItem>
+                        <MenuItem onClick={() => handleOpenPriorityModal(calendar)}>
+                          <ListItemIcon>
+                            <PriorityIcon fontSize="small" />
+                          </ListItemIcon>
+                          <ListItemText>優先度設定</ListItemText>
                         </MenuItem>
                         <MenuItem onClick={() => { handleEdit(calendar.id); handleMenuClose(calendar.id); }}>
-                          <EditIcon fontSize="small" sx={{ mr: 1 }} />
-                          編集
+                          <ListItemIcon>
+                            <EditIcon fontSize="small" />
+                          </ListItemIcon>
+                          <ListItemText>編集</ListItemText>
                         </MenuItem>
                         <MenuItem onClick={() => { handleDuplicate(calendar.id); handleMenuClose(calendar.id); }}>
-                          <ContentCopyIcon fontSize="small" sx={{ mr: 1 }} />
-                          複製
+                          <ListItemIcon>
+                            <ContentCopyIcon fontSize="small" />
+                          </ListItemIcon>
+                          <ListItemText>複製</ListItemText>
                         </MenuItem>
                         <MenuItem onClick={() => { handleDelete(calendar.id); handleMenuClose(calendar.id); }} sx={{ color: 'error.main' }}>
-                          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-                          削除
+                          <ListItemIcon>
+                            <DeleteIcon fontSize="small" color="error" />
+                          </ListItemIcon>
+                          <ListItemText>削除</ListItemText>
                         </MenuItem>
                       </Menu>
                     </Box>
@@ -442,6 +473,17 @@ const CalendarList: React.FC = () => {
               </Grid>
             ))}
           </Grid>
+        )}
+
+        {/* 優先度設定モーダル */}
+        {selectedCalendar && (
+          <PrioritySettingsModal
+            open={priorityModalOpen}
+            onClose={handleClosePriorityModal}
+            calendarId={selectedCalendar.id}
+            calendarName={selectedCalendar.name}
+            onUpdate={fetchCalendars}
+          />
         )}
 
         {/* Snackbar通知 */}

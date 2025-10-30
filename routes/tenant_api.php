@@ -56,8 +56,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/calendars/{id}', [CalendarController::class, 'destroy']);
     Route::post('/calendars/{id}/toggle', [CalendarController::class, 'toggle']);
     
+    // カレンダーの担当者管理（優先度付き）
+    Route::get('/calendars/{id}/users', [CalendarController::class, 'getUsers']);
+    Route::post('/calendars/{id}/users', [CalendarController::class, 'addUser']);
+    Route::put('/calendars/{calendarId}/users/{userId}', [CalendarController::class, 'updateUserPriority']);
+    Route::delete('/calendars/{calendarId}/users/{userId}', [CalendarController::class, 'removeUser']);
+    
     // カレンダー作成用のマスタデータ
-    Route::get('/calendar-users', [CalendarController::class, 'getUsers']);
+    Route::get('/calendar-users', [CalendarController::class, 'getAllUsers']);
     Route::get('/hearing-forms-list', [CalendarController::class, 'getHearingForms']);
     
     // Google Calendar連携

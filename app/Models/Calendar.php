@@ -52,7 +52,9 @@ class Calendar extends Model
      */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'calendar_users');
+        return $this->belongsToMany(User::class, 'calendar_users')
+            ->withPivot('priority')
+            ->withTimestamps();
     }
 
     /**
