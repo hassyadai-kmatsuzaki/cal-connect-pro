@@ -85,6 +85,8 @@ const HearingFormResponses: React.FC = () => {
   const [tab, setTab] = useState(0);
   const [selectedResponse, setSelectedResponse] = useState<FormResponse | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [userResponsesDialogOpen, setUserResponsesDialogOpen] = useState(false);
+  const [selectedUserResponses, setSelectedUserResponses] = useState<FormResponse[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -122,6 +124,12 @@ const HearingFormResponses: React.FC = () => {
   const handleViewResponse = (response: FormResponse) => {
     setSelectedResponse(response);
     setDialogOpen(true);
+  };
+
+  const handleViewUserResponses = (lineUserId: number) => {
+    const userResponsesList = responses.filter((r) => r.line_user.id === lineUserId);
+    setSelectedUserResponses(userResponsesList);
+    setUserResponsesDialogOpen(true);
   };
 
   const handleDeleteClick = (response: FormResponse) => {
@@ -370,14 +378,7 @@ const HearingFormResponses: React.FC = () => {
                         <Button
                           size="small"
                           variant="outlined"
-                          onClick={() => {
-                            const userResponsesList = responses.filter(
-                              (r) => r.line_user.id === user.line_user_id
-                            );
-                            if (userResponsesList.length > 0) {
-                              handleViewResponse(userResponsesList[0]);
-                            }
-                          }}
+                          onClick={() => handleViewUserResponses(user.line_user_id)}
                         >
                           詳細を表示
                         </Button>
@@ -438,6 +439,72 @@ const HearingFormResponses: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>閉じる</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ユーザーの全回答ダイアログ */}
+      <Dialog
+        open={userResponsesDialogOpen}
+        onClose={() => setUserResponsesDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedUserResponses.length > 0 && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <img
+                src={selectedUserResponses[0].line_user.picture_url || '/default-avatar.png'}
+                alt={selectedUserResponses[0].line_user.display_name}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                }}
+              />
+              <Box>
+                <Typography variant="h6">{selectedUserResponses[0].line_user.display_name}の回答履歴</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  全{selectedUserResponses.length}件の回答
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedUserResponses.map((response, index) => (
+            <Box key={response.id} sx={{ mb: 3, pb: 3, borderBottom: index < selectedUserResponses.length - 1 ? '1px solid #e0e0e0' : 'none' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  回答 #{selectedUserResponses.length - index}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    label={response.status === 'completed' ? '完了' : '下書き'}
+                    color={response.status === 'completed' ? 'success' : 'default'}
+                    size="small"
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    {formatDate(response.submitted_at)}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {response.answers.map((answer) => (
+                <Box key={answer.id} sx={{ mb: 2, ml: 2 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    Q. {answer.item.label}
+                  </Typography>
+                  <Typography variant="body2" sx={{ ml: 2 }}>
+                    A. {answer.answer_text}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUserResponsesDialogOpen(false)}>閉じる</Button>
         </DialogActions>
       </Dialog>
 
