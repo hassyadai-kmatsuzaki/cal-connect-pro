@@ -973,6 +973,11 @@ class LiffController extends Controller
 
             // 各質問の回答を保存
             foreach ($request->answers as $itemId => $answerText) {
+                // 配列の場合はJSON文字列に変換
+                if (is_array($answerText)) {
+                    $answerText = implode(', ', $answerText);
+                }
+                
                 \App\Models\FormResponseAnswer::create([
                     'form_response_id' => $formResponse->id,
                     'hearing_form_item_id' => $itemId,
@@ -984,6 +989,9 @@ class LiffController extends Controller
             $form->increment('total_responses');
 
             DB::commit();
+
+            // リレーションをロード
+            $formResponse->load(['hearingForm', 'lineUser', 'answers.hearingFormItem']);
 
             // Slack通知を送信
             if ($form->slack_notify && $form->slack_webhook) {

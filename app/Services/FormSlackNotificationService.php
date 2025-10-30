@@ -138,6 +138,20 @@ class FormSlackNotificationService
     }
 
     /**
+     * フォーム回答通知を送信（notifyFormResponseのエイリアス）
+     */
+    public function sendFormResponseNotification($formResponse, $form, $lineUser): bool
+    {
+        // FormResponseオブジェクトの場合はそのまま使用
+        if ($formResponse instanceof FormResponse) {
+            return $this->notifyFormResponse($formResponse);
+        }
+        
+        // 引数が別々の場合は組み立てて通知
+        return $this->notifyFormResponse($formResponse);
+    }
+
+    /**
      * テスト通知を送信
      */
     public function sendTestNotification(HearingForm $hearingForm): bool
