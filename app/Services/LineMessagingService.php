@@ -8,12 +8,11 @@ use Illuminate\Support\Facades\Log;
 class LineMessagingService
 {
     private $client;
-    private $channelAccessToken;
+    private $channelAccessToken = null;
 
     public function __construct()
     {
         $this->client = new Client();
-        $this->channelAccessToken = $this->getChannelAccessToken();
     }
 
     /**
@@ -21,8 +20,13 @@ class LineMessagingService
      */
     private function getChannelAccessToken(): string
     {
-        $lineSetting = \App\Models\LineSetting::first();
-        return $lineSetting ? $lineSetting->channel_access_token : '';
+        // 遅延評価：初回呼び出し時のみDBアクセス
+        if ($this->channelAccessToken === null) {
+            $lineSetting = \App\Models\LineSetting::first();
+            $this->channelAccessToken = $lineSetting ? $lineSetting->channel_access_token : '';
+        }
+        
+        return $this->channelAccessToken;
     }
 
     /**
@@ -33,7 +37,7 @@ class LineMessagingService
         try {
             $response = $this->client->post('https://api.line.me/v2/bot/message/push', [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $this->channelAccessToken,
+                    'Authorization' => 'Bearer ' . $this->getChannelAccessToken(),
                     'Content-Type' => 'application/json',
                 ],
                 'json' => [
@@ -146,7 +150,7 @@ class LineMessagingService
         try {
             $response = $this->client->post('https://api.line.me/v2/bot/message/push', [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $this->channelAccessToken,
+                    'Authorization' => 'Bearer ' . $this->getChannelAccessToken(),
                     'Content-Type' => 'application/json',
                 ],
                 'json' => [
@@ -215,7 +219,7 @@ class LineMessagingService
         try {
             $response = $this->client->post('https://api.line.me/v2/bot/message/push', [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $this->channelAccessToken,
+                    'Authorization' => 'Bearer ' . $this->getChannelAccessToken(),
                     'Content-Type' => 'application/json',
                 ],
                 'json' => [
