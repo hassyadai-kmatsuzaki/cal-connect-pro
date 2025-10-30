@@ -100,15 +100,15 @@ const HearingFormResponses: React.FC = () => {
       setError(null);
 
       // フォーム情報を取得
-      const formRes = await axios.get(`/api/tenant/hearing-forms/${id}`);
+      const formRes = await axios.get(`/api/hearing-forms/${id}`);
       setForm(formRes.data.data);
 
       // 回答データを取得（回答ごと）
-      const responsesRes = await axios.get(`/api/tenant/hearing-forms/${id}/responses`);
+      const responsesRes = await axios.get(`/api/hearing-forms/${id}/responses`);
       setResponses(responsesRes.data.data);
 
       // 回答データを取得（ユーザーごと）
-      const userResponsesRes = await axios.get(`/api/tenant/hearing-forms/${id}/responses/by-user`);
+      const userResponsesRes = await axios.get(`/api/hearing-forms/${id}/responses/by-user`);
       setUserResponses(userResponsesRes.data.data);
 
     } catch (err: any) {
@@ -135,7 +135,7 @@ const HearingFormResponses: React.FC = () => {
 
     try {
       setDeletingId(selectedMenuResponse.id);
-      await axios.delete(`/api/tenant/hearing-forms/${id}/responses/${selectedMenuResponse.id}`);
+      await axios.delete(`/api/hearing-forms/${id}/responses/${selectedMenuResponse.id}`);
       setDeleteDialogOpen(false);
       setSelectedMenuResponse(null);
       fetchData();
@@ -149,7 +149,7 @@ const HearingFormResponses: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      const response = await axios.get(`/api/tenant/hearing-forms/${id}/responses/export`, {
+      const response = await axios.get(`/api/hearing-forms/${id}/responses/export`, {
         responseType: 'blob',
         params: {
           format: 'csv',
