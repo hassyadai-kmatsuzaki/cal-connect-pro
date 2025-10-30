@@ -78,13 +78,5 @@ class Calendar extends Model
     {
         return $this->hasMany(InflowSource::class);
     }
-
-    /**
-     * メッセージテンプレート
-     */
-    public function messageTemplates()
-    {
-        return $this->morphMany(MessageTemplate::class, 'templatable');
-    }
 }
 

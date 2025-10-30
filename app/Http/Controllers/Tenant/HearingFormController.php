@@ -299,5 +299,33 @@ class HearingFormController extends Controller
             'message' => $form->is_active ? 'フォームを有効にしました' : 'フォームを無効にしました',
         ]);
     }
+
+    /**
+     * LIFF設定を更新
+     */
+    public function updateLiffSettings(Request $request, $id)
+    {
+        $form = HearingForm::find($id);
+
+        if (!$form) {
+            return response()->json([
+                'message' => 'ヒアリングフォームが見つかりません',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'standalone_enabled' => 'sometimes|boolean',
+            'standalone_message' => 'nullable|string|max:500',
+            'auto_reply_enabled' => 'sometimes|boolean',
+            'auto_reply_message' => 'nullable|string|max:5000',
+        ]);
+
+        $form->update($validated);
+
+        return response()->json([
+            'data' => $form,
+            'message' => 'LIFF設定を更新しました'
+        ]);
+    }
 }
 

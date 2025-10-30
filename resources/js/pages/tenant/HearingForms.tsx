@@ -42,6 +42,8 @@ import {
   Preview,
   Close,
   Info as InfoIcon,
+  ContentCopy as ContentCopyIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material';
 import TenantLayout from '../../layouts/TenantLayout';
 import axios from 'axios';
@@ -61,6 +63,10 @@ interface HearingForm {
   name: string;
   description: string;
   is_active: boolean;
+  standalone_enabled?: boolean;
+  standalone_message?: string;
+  auto_reply_enabled?: boolean;
+  auto_reply_message?: string;
   items: FormItem[];
   items_count?: number;
   created_at: string;
@@ -326,6 +332,55 @@ const HearingForms: React.FC = () => {
     });
   };
 
+  const copyFormUrl = async (form: HearingForm) => {
+    if (!form.standalone_enabled) {
+      setSnackbar({
+        open: true,
+        message: 'フォームの独立送信が無効です',
+        severity: 'error',
+      });
+      return;
+    }
+
+    try {
+      // LINE設定からLIFF IDを取得
+      const lineSettingsResponse = await axios.get('/api/line-settings');
+      const lineSettings = lineSettingsResponse.data.data;
+      
+      if (lineSettings && lineSettings.liff_id) {
+        // LIFF URLを生成
+        const liffUrl = `https://liff.line.me/${lineSettings.liff_id}/?route=form&form=${form.id}`;
+        navigator.clipboard.writeText(liffUrl);
+        setSnackbar({
+          open: true,
+          message: 'LIFFフォームURLをコピーしました',
+          severity: 'success',
+        });
+      } else {
+        // フォールバック: セントラルドメイン経由
+        const tenantId = window.location.hostname.split('.')[0];
+        const formUrl = `https://anken.cloud/form/${tenantId}/${form.id}`;
+        navigator.clipboard.writeText(formUrl);
+        setSnackbar({
+          open: true,
+          message: 'フォームURLをコピーしました（LIFF未設定）',
+          severity: 'success',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to get LINE settings:', error);
+      // エラー時のフォールバック
+      const tenantId = window.location.hostname.split('.')[0];
+      const formUrl = `https://anken.cloud/form/${tenantId}/${form.id}`;
+      navigator.clipboard.writeText(formUrl);
+      setSnackbar({
+        open: true,
+        message: 'フォームURLをコピーしました',
+        severity: 'success',
+      });
+    }
+  };
+
   const handleAddOption = () => {
     setFieldData({
       ...fieldData,
@@ -537,35 +592,61 @@ const HearingForms: React.FC = () => {
                       <Typography variant="caption" color="text.secondary">
                         作成日: {new Date(form.created_at).toLocaleDateString('ja-JP')}
                       </Typography>
+                      {form.standalone_enabled && (
+                        <Box sx={{ mt: 1 }}>
+                          <Chip 
+                            icon={<LinkIcon />}
+                            label="独立送信有効" 
+                            color="success" 
+                            size="small"
+                          />
+                        </Box>
+                      )}
                     </Box>
 
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<Preview />}
-                        onClick={() => setPreviewForm(form)}
-                        fullWidth
-                      >
-                        プレビュー
-                      </Button>
-                      <Tooltip 
-                        title={form.is_active && form.is_used_in_active_calendar ? "アクティブなカレンダーで使用中のため無効化できません" : ""}
-                        placement="top"
-                      >
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={form.is_active}
-                              onChange={() => handleToggleActive(form.id)}
-                              color="primary"
-                              disabled={form.is_active && form.is_used_in_active_calendar}
-                            />
-                          }
-                          label=""
-                          sx={{ m: 0 }}
-                        />
-                      </Tooltip>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Preview />}
+                          onClick={() => setPreviewForm(form)}
+                          fullWidth
+                        >
+                          プレビュー
+                        </Button>
+                        {form.standalone_enabled && (
+                          <Tooltip title="LIFF URLをコピー">
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => copyFormUrl(form)}
+                              sx={{ minWidth: 'auto', px: 1 }}
+                            >
+                              <ContentCopyIcon fontSize="small" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Tooltip 
+                          title={form.is_active && form.is_used_in_active_calendar ? "アクティブなカレンダーで使用中のため無効化できません" : ""}
+                          placement="top"
+                        >
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={form.is_active}
+                                onChange={() => handleToggleActive(form.id)}
+                                color="primary"
+                                disabled={form.is_active && form.is_used_in_active_calendar}
+                              />
+                            }
+                            label="アクティブ"
+                            sx={{ m: 0 }}
+                          />
+                        </Tooltip>
+                      </Box>
                     </Box>
                   </CardContent>
                 </Card>

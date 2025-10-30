@@ -15,18 +15,21 @@ class FormSubmission extends Model
         'hearing_form_id',
         'line_user_id',
         'inflow_source_id',
-        'customer_name',
-        'customer_email',
-        'customer_phone',
-        'ip_address',
-        'user_agent',
-        'slack_notified_at',
+        'status',
         'submitted_at',
+        'read_at',
+        'replied_at',
+        'notes',
     ];
 
     protected $casts = [
-        'slack_notified_at' => 'datetime',
         'submitted_at' => 'datetime',
+        'read_at' => 'datetime',
+        'replied_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'answers_count',
     ];
 
     /**
@@ -62,11 +65,66 @@ class FormSubmission extends Model
     }
 
     /**
-     * Slack通知済みかどうか
+     * 回答数を取得
      */
-    public function isSlackNotified(): bool
+    public function getAnswersCountAttribute(): int
     {
-        return !is_null($this->slack_notified_at);
+        return $this->answers()->count();
+    }
+
+    /**
+     * ステータス判定
+     */
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isRead(): bool
+    {
+        return $this->status === 'read';
+    }
+
+    public function isReplied(): bool
+    {
+        return $this->status === 'replied';
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->status === 'archived';
+    }
+
+    /**
+     * 既読にする
+     */
+    public function markAsRead(): void
+    {
+        $this->update([
+            'status' => 'read',
+            'read_at' => now(),
+        ]);
+    }
+
+    /**
+     * 返信済みにする
+     */
+    public function markAsReplied(): void
+    {
+        $this->update([
+            'status' => 'replied',
+            'replied_at' => now(),
+        ]);
+    }
+
+    /**
+     * アーカイブする
+     */
+    public function archive(): void
+    {
+        $this->update([
+            'status' => 'archived',
+        ]);
     }
 }
 

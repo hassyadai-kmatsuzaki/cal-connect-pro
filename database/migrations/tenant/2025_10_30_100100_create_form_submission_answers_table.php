@@ -10,20 +10,12 @@ return new class extends Migration
     {
         Schema::create('form_submission_answers', function (Blueprint $table) {
             $table->id();
-            
-            $table->foreignId('form_submission_id')
-                ->constrained()
-                ->onDelete('cascade');
-            
-            $table->foreignId('hearing_form_item_id')
-                ->constrained()
-                ->onDelete('cascade');
-            
-            $table->text('answer_text')->nullable();
-            
+            $table->foreignId('form_submission_id')->constrained()->onDelete('cascade');
+            $table->foreignId('hearing_form_item_id')->constrained()->onDelete('cascade');
+            $table->text('answer_text');
             $table->timestamps();
             
-            // インデックス
+            $table->unique(['form_submission_id', 'hearing_form_item_id'], 'unique_submission_item');
             $table->index('form_submission_id');
             $table->index('hearing_form_item_id');
         });

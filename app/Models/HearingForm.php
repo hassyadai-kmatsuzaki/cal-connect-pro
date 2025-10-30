@@ -14,10 +14,16 @@ class HearingForm extends Model
         'name',
         'description',
         'is_active',
+        'standalone_enabled',
+        'standalone_message',
+        'auto_reply_enabled',
+        'auto_reply_message',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'standalone_enabled' => 'boolean',
+        'auto_reply_enabled' => 'boolean',
     ];
 
     /**
@@ -37,17 +43,9 @@ class HearingForm extends Model
     }
 
     /**
-     * メッセージテンプレート
+     * 独立送信の回答
      */
-    public function messageTemplates()
-    {
-        return $this->morphMany(MessageTemplate::class, 'templatable');
-    }
-
-    /**
-     * フォーム送信
-     */
-    public function formSubmissions(): HasMany
+    public function submissions(): HasMany
     {
         return $this->hasMany(FormSubmission::class);
     }
