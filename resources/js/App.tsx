@@ -19,6 +19,7 @@ import HearingFormList from './pages/tenant/HearingFormList';
 import HearingFormNew from './pages/tenant/HearingFormNew';
 import HearingFormDetail from './pages/tenant/HearingFormDetail';
 import HearingFormEdit from './pages/tenant/HearingFormEdit';
+import HearingFormResponses from './pages/tenant/HearingFormResponses';
 import InflowAnalysis from './pages/tenant/InflowAnalysis';
 import UserManagement from './pages/tenant/UserManagement';
 import TagManagement from './pages/tenant/TagManagement';
@@ -128,7 +129,7 @@ const App: React.FC = () => {
               path="/hearing-forms/:id/responses"
               element={
                 <PrivateRoute>
-                  <div>回答一覧ページ（近日実装）</div>
+                  <HearingFormResponses />
                 </PrivateRoute>
               }
             />

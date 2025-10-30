@@ -26,6 +26,12 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     Route::post('/liff/{tenant_id}/track-inflow', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
     Route::get('/liff/{tenant_id}/line-setting', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
     
+    // LIFF用のフォームAPI
+    Route::get('/liff/{tenant_id}/forms/{formKey}', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
+    Route::post('/liff/{tenant_id}/forms/{formKey}/submit', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
+    Route::post('/liff/{tenant_id}/forms/{formKey}/draft', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
+    Route::get('/liff/{tenant_id}/forms/{formKey}/draft', [\App\Http\Controllers\Central\LiffController::class, 'handle']);
+    
     // LIFF用のカレンダーAPI
     Route::get('/liff/{tenant_id}/calendars/{calendarId}', function ($tenantId, $calendarId) {
         \Log::error('Calendar API route called', [

@@ -15,10 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('hearing_form_id')->constrained()->onDelete('cascade');
             $table->foreignId('line_user_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('response_token', 64)->unique();
+            $table->string('response_token', 64)->unique()->nullable();
             $table->string('status', 20)->default('completed'); // draft, completed
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
+            $table->json('draft_data')->nullable(); // 下書きデータ
             $table->timestamp('submitted_at')->nullable();
             $table->timestamps();
             

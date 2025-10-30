@@ -23,7 +23,7 @@ class FormResponseController extends Controller
             ], 404);
         }
 
-        $query = FormResponse::with(['lineUser', 'answers'])
+        $query = FormResponse::with(['lineUser', 'answers.hearingFormItem'])
             ->where('hearing_form_id', $formId)
             ->where('status', 'completed');
 
@@ -122,14 +122,23 @@ class FormResponseController extends Controller
             ], 404);
         }
 
-        $userStats = FormResponse::selectRaw('line_user_id, COUNT(*) as response_count, MAX(submitted_at) as last_response_at')
+        $userStats = FormResponse::selectRaw('line_user_id, COUNT(*) as response_count, MAX(submitted_at) as latest_response_at')
             ->where('hearing_form_id', $formId)
             ->where('status', 'completed')
             ->whereNotNull('line_user_id')
             ->groupBy('line_user_id')
             ->with('lineUser')
             ->orderBy('response_count', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($stat) {
+                return [
+                    'line_user_id' => $stat->line_user_id,
+                    'display_name' => $stat->lineUser ? $stat->lineUser->display_name : '不明',
+                    'picture_url' => $stat->lineUser ? $stat->lineUser->picture_url : null,
+                    'response_count' => $stat->response_count,
+                    'latest_response_at' => $stat->latest_response_at,
+                ];
+            });
 
         return response()->json([
             'data' => $userStats,

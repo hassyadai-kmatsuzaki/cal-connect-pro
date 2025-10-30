@@ -55,6 +55,7 @@
     <script>
         const formKey = '{{ $formKey }}';
         const tenantId = '{{ $tenantId }}';
+        const apiBasePath = `/api/liff/${tenantId}`;
         let liffAccessToken = '';
         let lineUserId = '';
 
@@ -77,6 +78,20 @@
                 const profile = await liff.getProfile();
                 lineUserId = profile.userId;
 
+                // LINEユーザー情報をサーバーに送信
+                await fetch(`${apiBasePath}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        line_user_id: profile.userId,
+                        display_name: profile.displayName,
+                        picture_url: profile.pictureUrl || null,
+                        status_message: profile.statusMessage || null,
+                    })
+                });
+
                 await loadForm();
             } catch (error) {
                 console.error('初期化エラー:', error);
@@ -86,7 +101,7 @@
 
         async function loadForm() {
             try {
-                const response = await fetch(`/api/public/forms/${formKey}`);
+                const response = await fetch(`${apiBasePath}/forms/${formKey}`);
                 if (!response.ok) {
                     throw new Error('フォームの取得に失敗しました');
                 }
@@ -269,7 +284,7 @@
                 submitBtn.textContent = '送信中...';
 
                 // API送信
-                const response = await fetch(`/api/public/forms/${formKey}/submit`, {
+                const response = await fetch(`${apiBasePath}/forms/${formKey}/submit`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

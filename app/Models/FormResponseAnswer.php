@@ -31,5 +31,23 @@ class FormResponseAnswer extends Model
     {
         return $this->belongsTo(HearingFormItem::class);
     }
+
+    /**
+     * item (hearingFormItemのエイリアス)
+     */
+    public function item(): BelongsTo
+    {
+        return $this->hearingFormItem();
+    }
+
+    /**
+     * itemアクセサー（JSONシリアライズ用）
+     */
+    protected $appends = ['item'];
+
+    public function getItemAttribute()
+    {
+        return $this->hearingFormItem;
+    }
 }
 

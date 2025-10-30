@@ -39,6 +39,14 @@ class LiffController extends Controller
                     } elseif ($request->is('*/track-inflow')) {
                         Log::info('Calling tenant trackInflow method');
                         return $tenantLiffController->trackInflow($request);
+                    } elseif ($request->is('*/forms/*/submit')) {
+                        Log::info('Calling tenant submitForm method');
+                        $formKey = $request->route('formKey');
+                        return $tenantLiffController->submitForm($request, $formKey);
+                    } elseif ($request->is('*/forms/*/draft')) {
+                        Log::info('Calling tenant saveFormDraft method');
+                        $formKey = $request->route('formKey');
+                        return $tenantLiffController->saveFormDraft($request, $formKey);
                     }
                     break;
                 case 'GET':
@@ -48,6 +56,14 @@ class LiffController extends Controller
                     } elseif ($request->is('*/line-setting')) {
                         Log::info('Calling tenant getLineSetting method');
                         return $tenantLiffController->getLineSetting($request);
+                    } elseif ($request->is('*/forms/*') && !$request->is('*/forms/*/draft') && !$request->is('*/forms/*/submit')) {
+                        Log::info('Calling tenant getForm method');
+                        $formKey = $request->route('formKey');
+                        return $tenantLiffController->getForm($formKey);
+                    } elseif ($request->is('*/forms/*/draft')) {
+                        Log::info('Calling tenant getFormDraft method');
+                        $formKey = $request->route('formKey');
+                        return $tenantLiffController->getFormDraft($request, $formKey);
                     }
                     break;
             }

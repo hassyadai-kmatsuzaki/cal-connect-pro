@@ -896,4 +896,244 @@ class LiffController extends Controller
             // エラーハンドリング
         }
     }
+
+    /**
+     * フォーム情報を取得（LIFF用）
+     */
+    public function getForm($formKey)
+    {
+        try {
+            $form = \App\Models\HearingForm::where('form_key', $formKey)
+                ->where('is_active', true)
+                ->with('items')
+                ->first();
+
+            if (!$form) {
+                return response()->json([
+                    'message' => 'フォームが見つかりません',
+                ], 404);
+            }
+
+            return response()->json([
+                'data' => $form,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'フォームの取得に失敗しました',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * フォーム回答を送信（LIFF用）
+     */
+    public function submitForm(Request $request, $formKey)
+    {
+        $validator = Validator::make($request->all(), [
+            'line_user_id' => 'required|string',
+            'answers' => 'required|array',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'バリデーションエラー',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $form = \App\Models\HearingForm::where('form_key', $formKey)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$form) {
+                return response()->json([
+                    'message' => 'フォームが見つかりません',
+                ], 404);
+            }
+
+            // LINEユーザーを取得または作成
+            $lineUser = LineUser::where('line_user_id', $request->line_user_id)->first();
+            if (!$lineUser) {
+                return response()->json([
+                    'message' => 'LINEユーザーが見つかりません',
+                ], 404);
+            }
+
+            // フォーム回答を作成
+            $formResponse = \App\Models\FormResponse::create([
+                'hearing_form_id' => $form->id,
+                'line_user_id' => $lineUser->id,
+                'status' => 'completed',
+                'submitted_at' => now(),
+            ]);
+
+            // 各質問の回答を保存
+            foreach ($request->answers as $itemId => $answerText) {
+                \App\Models\FormResponseAnswer::create([
+                    'form_response_id' => $formResponse->id,
+                    'hearing_form_item_id' => $itemId,
+                    'answer_text' => $answerText,
+                ]);
+            }
+
+            // total_responsesをインクリメント
+            $form->increment('total_responses');
+
+            DB::commit();
+
+            // Slack通知を送信
+            if ($form->slack_notify && $form->slack_webhook) {
+                $this->sendFormSlackNotification($formResponse, $form, $lineUser);
+            }
+
+            return response()->json([
+                'data' => $formResponse,
+                'message' => 'フォームの回答を送信しました',
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'message' => 'フォーム回答の送信に失敗しました',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * 下書きを保存（LIFF用）
+     */
+    public function saveFormDraft(Request $request, $formKey)
+    {
+        $validator = Validator::make($request->all(), [
+            'line_user_id' => 'required|string',
+            'answers' => 'required|array',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'バリデーションエラー',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $form = \App\Models\HearingForm::where('form_key', $formKey)->first();
+
+            if (!$form) {
+                return response()->json([
+                    'message' => 'フォームが見つかりません',
+                ], 404);
+            }
+
+            $lineUser = LineUser::where('line_user_id', $request->line_user_id)->first();
+            if (!$lineUser) {
+                return response()->json([
+                    'message' => 'LINEユーザーが見つかりません',
+                ], 404);
+            }
+
+            // 既存の下書きを検索
+            $draft = \App\Models\FormResponse::where('hearing_form_id', $form->id)
+                ->where('line_user_id', $lineUser->id)
+                ->where('status', 'draft')
+                ->first();
+
+            if ($draft) {
+                // 既存の下書きを更新
+                $draft->update([
+                    'draft_data' => $request->answers,
+                ]);
+            } else {
+                // 新しい下書きを作成
+                $draft = \App\Models\FormResponse::create([
+                    'hearing_form_id' => $form->id,
+                    'line_user_id' => $lineUser->id,
+                    'status' => 'draft',
+                    'draft_data' => $request->answers,
+                ]);
+            }
+
+            return response()->json([
+                'data' => $draft,
+                'message' => '下書きを保存しました',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => '下書きの保存に失敗しました',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * 下書きを取得（LIFF用）
+     */
+    public function getFormDraft(Request $request, $formKey)
+    {
+        $lineUserId = $request->query('line_user_id');
+
+        if (!$lineUserId) {
+            return response()->json([
+                'message' => 'LINEユーザーIDが必要です',
+            ], 400);
+        }
+
+        try {
+            $form = \App\Models\HearingForm::where('form_key', $formKey)->first();
+
+            if (!$form) {
+                return response()->json([
+                    'message' => 'フォームが見つかりません',
+                ], 404);
+            }
+
+            $lineUser = LineUser::where('line_user_id', $lineUserId)->first();
+            if (!$lineUser) {
+                return response()->json([
+                    'message' => 'LINEユーザーが見つかりません',
+                ], 404);
+            }
+
+            $draft = \App\Models\FormResponse::where('hearing_form_id', $form->id)
+                ->where('line_user_id', $lineUser->id)
+                ->where('status', 'draft')
+                ->first();
+
+            if (!$draft) {
+                return response()->json([
+                    'message' => '下書きが見つかりません',
+                ], 404);
+            }
+
+            return response()->json([
+                'data' => $draft,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => '下書きの取得に失敗しました',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * フォーム回答のSlack通知を送信
+     */
+    private function sendFormSlackNotification($formResponse, $form, $lineUser)
+    {
+        try {
+            $formSlackService = new \App\Services\FormSlackNotificationService();
+            $formSlackService->sendFormResponseNotification($formResponse, $form, $lineUser);
+        } catch (\Exception $e) {
+            \Log::error('Failed to send form Slack notification: ' . $e->getMessage());
+        }
+    }
 }

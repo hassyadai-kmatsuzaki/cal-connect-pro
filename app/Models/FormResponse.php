@@ -19,10 +19,12 @@ class FormResponse extends Model
         'ip_address',
         'user_agent',
         'submitted_at',
+        'draft_data',
     ];
 
     protected $casts = [
         'submitted_at' => 'datetime',
+        'draft_data' => 'array',
     ];
 
     /**
