@@ -48,6 +48,7 @@ interface Reservation {
   customer_name: string;
   customer_email?: string;
   customer_phone?: string;
+  meet_url?: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   cancellation_reason?: string;
   cancelled_at?: string;
@@ -67,6 +68,7 @@ interface Reservation {
   lineUser?: {
     id: number;
     display_name: string;
+    picture_url?: string;
   };
   inflowSource?: {
     id: number;
@@ -447,14 +449,65 @@ const ReservationDetail: React.FC = () => {
                       <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
                         LINEユーザー
                       </Typography>
-                      <Typography variant="body1">
-                        {reservation.lineUser?.display_name || '-'}
-                      </Typography>
+                      {reservation.lineUser ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar 
+                            src={reservation.lineUser.picture_url || undefined}
+                            sx={{ width: 32, height: 32 }}
+                          >
+                            {!reservation.lineUser.picture_url && reservation.lineUser.display_name[0]}
+                          </Avatar>
+                          <Typography variant="body1">
+                            {reservation.lineUser.display_name}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Typography variant="body1">-</Typography>
+                      )}
                     </Box>
                   </Grid>
                 </Grid>
               </CardContent>
             </Card>
+
+            {/* Meet URL */}
+            {reservation.meet_url && (
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                    📹 Google Meet URL
+                  </Typography>
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ 
+                    p: 2, 
+                    bgcolor: 'primary.50', 
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'primary.200'
+                  }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        wordBreak: 'break-all',
+                        mb: 1
+                      }}
+                    >
+                      {reservation.meet_url}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      href={reservation.meet_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ mt: 1 }}
+                    >
+                      ミーティングに参加
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
 
             {/* ヒアリングフォーム回答 */}
             {reservation.answers && reservation.answers.length > 0 && (
