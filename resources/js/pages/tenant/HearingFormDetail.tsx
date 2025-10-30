@@ -53,6 +53,7 @@ interface HearingForm {
   settings: any;
   slack_notify: boolean;
   slack_webhook: string;
+  form_completion_message: string;
   created_at: string;
   updated_at: string;
 }
@@ -448,6 +449,81 @@ const HearingFormDetail: React.FC = () => {
                 </Paper>
               ) : (
                 <Alert severity="info">フォーム項目がありません</Alert>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* LINE完了メッセージ */}
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                LINE完了メッセージ
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              {form.form_completion_message ? (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    設定中のメッセージ
+                  </Typography>
+                  <Paper 
+                    variant="outlined" 
+                    sx={{ 
+                      p: 2, 
+                      mb: 2, 
+                      backgroundColor: 'grey.50',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {form.form_completion_message}
+                    </Typography>
+                  </Paper>
+                  
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    プレビュー例
+                  </Typography>
+                  <Paper 
+                    variant="outlined" 
+                    sx={{ 
+                      p: 2, 
+                      backgroundColor: 'success.50',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {form.form_completion_message
+                        .replace(/\{\{user_name\}\}/g, '山田太郎')
+                        .replace(/\{user_name\}/g, '山田太郎')
+                        .replace(/\{\{form_name\}\}/g, form.name)
+                        .replace(/\{form_name\}/g, form.name)
+                        .replace(/\{\{submitted_at\}\}/g, new Date().toLocaleString('ja-JP', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }))
+                        .replace(/\{submitted_at\}/g, new Date().toLocaleString('ja-JP', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }))
+                      }
+                    </Typography>
+                  </Paper>
+                  
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    利用可能なプレースホルダー: <code>{'{{user_name}}'}</code>, <code>{'{{form_name}}'}</code>, <code>{'{{submitted_at}}'}</code>
+                  </Alert>
+                </Box>
+              ) : (
+                <Alert severity="warning">
+                  LINE完了メッセージが設定されていません。編集画面から設定してください。
+                </Alert>
               )}
             </CardContent>
           </Card>
