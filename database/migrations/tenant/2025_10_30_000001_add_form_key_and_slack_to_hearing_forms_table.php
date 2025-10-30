@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('hearing_forms', function (Blueprint $table) {
-            $table->string('form_key', 32)->unique()->after('description');
+            $table->string('form_key', 32)->unique()->nullable()->after('description');
             $table->text('liff_url')->nullable()->after('form_key');
             $table->json('settings')->nullable()->after('liff_url');
             $table->integer('total_responses')->default(0)->after('settings');
