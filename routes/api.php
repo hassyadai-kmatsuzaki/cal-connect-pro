@@ -65,16 +65,6 @@ Route::middleware([\App\Http\Middleware\InitializeTenancyByParam::class])->group
     
     // 流入経路追跡API
     Route::post('/inflow-sources/track', [\App\Http\Controllers\Tenant\InflowSourceController::class, 'track']);
-    
-    // フォーム関連API
-    Route::get('/liff/{tenant_id}/hearing-forms/{form_id}', function ($tenantId, $formId) {
-        $controller = new \App\Http\Controllers\Tenant\LiffController();
-        return $controller->getHearingForm($tenantId, $formId);
-    });
-    Route::post('/liff/{tenant_id}/form-submissions', function ($tenantId) {
-        $controller = new \App\Http\Controllers\Tenant\LiffController();
-        return $controller->submitForm(request(), $tenantId);
-    });
 });
 
 Route::prefix('central')->middleware([PreventAccessFromTenantDomains::class])->group(function () {

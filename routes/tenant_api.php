@@ -7,13 +7,14 @@ use App\Http\Controllers\Tenant\TagController;
 use App\Http\Controllers\Tenant\CalendarController;
 use App\Http\Controllers\Tenant\GoogleCalendarController;
 use App\Http\Controllers\Tenant\HearingFormController;
+use App\Http\Controllers\Tenant\FormResponseController;
 use App\Http\Controllers\Tenant\InflowSourceController;
 use App\Http\Controllers\Tenant\ReservationController;
 use App\Http\Controllers\Tenant\PublicReservationController;
 use App\Http\Controllers\Tenant\WebhookController;
 use App\Http\Controllers\Tenant\UserInvitationController;
 use App\Http\Controllers\Tenant\InvitationController;
-use App\Http\Controllers\Tenant\FormSubmissionController;
+use App\Http\Controllers\PublicFormController;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,14 +74,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/hearing-forms/{id}', [HearingFormController::class, 'update']);
     Route::delete('/hearing-forms/{id}', [HearingFormController::class, 'destroy']);
     Route::post('/hearing-forms/{id}/toggle', [HearingFormController::class, 'toggle']);
-    Route::patch('/hearing-forms/{id}/liff-settings', [HearingFormController::class, 'updateLiffSettings']);
+    Route::post('/hearing-forms/{id}/duplicate', [HearingFormController::class, 'duplicate']);
+    Route::get('/hearing-forms/{id}/liff-url', [HearingFormController::class, 'getLiffUrl']);
+    Route::post('/hearing-forms/{id}/regenerate-key', [HearingFormController::class, 'regenerateKey']);
+    Route::get('/hearing-forms/{id}/statistics', [HearingFormController::class, 'statistics']);
+    Route::post('/hearing-forms/{id}/test-slack', [HearingFormController::class, 'testSlackNotification']);
     
     // フォーム回答管理
-    Route::get('/form-submissions', [FormSubmissionController::class, 'index']);
-    Route::get('/form-submissions/{id}', [FormSubmissionController::class, 'show']);
-    Route::patch('/form-submissions/{id}', [FormSubmissionController::class, 'update']);
-    Route::post('/form-submissions/{id}/reply', [FormSubmissionController::class, 'reply']);
-    Route::delete('/form-submissions/{id}', [FormSubmissionController::class, 'destroy']);
+    Route::get('/hearing-forms/{formId}/responses', [FormResponseController::class, 'index']);
+    Route::get('/hearing-forms/{formId}/responses/{responseId}', [FormResponseController::class, 'show']);
+    Route::delete('/hearing-forms/{formId}/responses/{responseId}', [FormResponseController::class, 'destroy']);
+    Route::get('/hearing-forms/{formId}/responses/by-user/summary', [FormResponseController::class, 'byUser']);
+    Route::post('/hearing-forms/{formId}/responses/export', [FormResponseController::class, 'export']);
     
     // 流入経路管理
     Route::get('/inflow-sources', [InflowSourceController::class, 'index']);
@@ -114,12 +119,19 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 });
 
-// 公開予約API（認証不要）
+// 公開API（認証不要）
 Route::prefix('public')->group(function () {
+    // 公開予約API
     Route::get('/calendars/{id}', [PublicReservationController::class, 'getCalendar']);
     Route::get('/calendars/{id}/available-slots', [PublicReservationController::class, 'getAvailableSlots']);
     Route::post('/calendars/{id}/reservations', [PublicReservationController::class, 'createReservation']);
     Route::post('/reservations/{id}/cancel', [PublicReservationController::class, 'cancelReservation']);
+    
+    // 公開フォームAPI
+    Route::get('/forms/{formKey}', [PublicFormController::class, 'show']);
+    Route::post('/forms/{formKey}/submit', [PublicFormController::class, 'submit']);
+    Route::post('/forms/{formKey}/draft', [PublicFormController::class, 'saveDraft']);
+    Route::get('/forms/{formKey}/draft/{token}', [PublicFormController::class, 'getDraft']);
 });
 
 // LINE Webhook（認証不要）

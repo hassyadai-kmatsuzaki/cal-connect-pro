@@ -80,6 +80,10 @@ class HearingFormController extends Controller
             'items.*.options.*' => 'string',
             'items.*.placeholder' => 'nullable|string|max:255',
             'items.*.help_text' => 'nullable|string|max:500',
+            'settings' => 'nullable|array',
+            'settings.completion_message' => 'nullable|string',
+            'slack_notify' => 'boolean',
+            'slack_webhook' => 'nullable|string|url',
         ], [
             'name.required' => 'フォーム名は必須です',
             'items.required' => 'フォーム項目は必須です',
@@ -87,6 +91,7 @@ class HearingFormController extends Controller
             'items.*.label.required' => '項目ラベルは必須です',
             'items.*.type.required' => '項目タイプは必須です',
             'items.*.type.in' => '無効な項目タイプです',
+            'slack_webhook.url' => 'Slack Webhook URLの形式が正しくありません',
         ]);
 
         if ($validator->fails()) {
@@ -98,12 +103,25 @@ class HearingFormController extends Controller
 
         DB::beginTransaction();
         try {
+            // フォームキーを生成
+            $formKey = \Illuminate\Support\Str::random(32);
+            while (HearingForm::where('form_key', $formKey)->exists()) {
+                $formKey = \Illuminate\Support\Str::random(32);
+            }
+
             // フォーム作成
             $form = HearingForm::create([
                 'name' => $request->name,
                 'description' => $request->description,
+                'form_key' => $formKey,
+                'settings' => $request->settings,
+                'slack_notify' => $request->slack_notify ?? false,
+                'slack_webhook' => $request->slack_webhook,
                 'is_active' => true,
             ]);
+
+            // LIFF URLを更新
+            $form->updateLiffUrl();
 
             // 項目作成
             foreach ($request->items as $index => $item) {
@@ -163,10 +181,15 @@ class HearingFormController extends Controller
             'items.*.options.*' => 'string',
             'items.*.placeholder' => 'nullable|string|max:255',
             'items.*.help_text' => 'nullable|string|max:500',
+            'settings' => 'nullable|array',
+            'settings.completion_message' => 'nullable|string',
+            'slack_notify' => 'boolean',
+            'slack_webhook' => 'nullable|string|url',
         ], [
             'name.required' => 'フォーム名は必須です',
             'items.required' => 'フォーム項目は必須です',
             'items.min' => '最低1つの項目が必要です',
+            'slack_webhook.url' => 'Slack Webhook URLの形式が正しくありません',
         ]);
 
         if ($validator->fails()) {
@@ -182,6 +205,9 @@ class HearingFormController extends Controller
             $form->update([
                 'name' => $request->name,
                 'description' => $request->description,
+                'settings' => $request->settings,
+                'slack_notify' => $request->slack_notify ?? false,
+                'slack_webhook' => $request->slack_webhook,
             ]);
 
             // 既存の項目を削除
@@ -301,9 +327,78 @@ class HearingFormController extends Controller
     }
 
     /**
-     * LIFF設定を更新
+     * フォームを複製
      */
-    public function updateLiffSettings(Request $request, $id)
+    public function duplicate($id)
+    {
+        $form = HearingForm::with('items')->find($id);
+
+        if (!$form) {
+            return response()->json([
+                'message' => 'ヒアリングフォームが見つかりません',
+            ], 404);
+        }
+
+        DB::beginTransaction();
+        try {
+            // フォームキーを生成
+            $formKey = \Illuminate\Support\Str::random(32);
+            while (HearingForm::where('form_key', $formKey)->exists()) {
+                $formKey = \Illuminate\Support\Str::random(32);
+            }
+
+            // フォーム複製
+            $newForm = HearingForm::create([
+                'name' => $form->name . ' (コピー)',
+                'description' => $form->description,
+                'form_key' => $formKey,
+                'settings' => $form->settings,
+                'slack_notify' => $form->slack_notify,
+                'slack_webhook' => $form->slack_webhook,
+                'is_active' => false, // 複製したフォームは無効状態で作成
+            ]);
+
+            // LIFF URLを更新
+            $newForm->updateLiffUrl();
+
+            // 項目も複製
+            foreach ($form->items as $item) {
+                HearingFormItem::create([
+                    'hearing_form_id' => $newForm->id,
+                    'label' => $item->label,
+                    'type' => $item->type,
+                    'required' => $item->required,
+                    'options' => $item->options,
+                    'placeholder' => $item->placeholder,
+                    'help_text' => $item->help_text,
+                    'order' => $item->order,
+                ]);
+            }
+
+            DB::commit();
+
+            $newForm->load('items');
+
+            return response()->json([
+                'data' => $newForm,
+                'message' => 'フォームを複製しました',
+            ], 201);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to duplicate hearing form: ' . $e->getMessage());
+            
+            return response()->json([
+                'message' => 'フォームの複製に失敗しました',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * LIFF URLを取得
+     */
+    public function getLiffUrl($id)
     {
         $form = HearingForm::find($id);
 
@@ -313,19 +408,163 @@ class HearingFormController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'standalone_enabled' => 'sometimes|boolean',
-            'standalone_message' => 'nullable|string|max:500',
-            'auto_reply_enabled' => 'sometimes|boolean',
-            'auto_reply_message' => 'nullable|string|max:5000',
+        return response()->json([
+            'data' => [
+                'liff_url' => $form->getLiffUrl(),
+                'form_key' => $form->form_key,
+            ],
         ]);
+    }
 
-        $form->update($validated);
+    /**
+     * フォームキーを再生成
+     */
+    public function regenerateKey($id)
+    {
+        $form = HearingForm::find($id);
+
+        if (!$form) {
+            return response()->json([
+                'message' => 'ヒアリングフォームが見つかりません',
+            ], 404);
+        }
+
+        try {
+            $formKey = $form->generateFormKey();
+            $form->update([
+                'form_key' => $formKey,
+            ]);
+            $form->updateLiffUrl();
+
+            return response()->json([
+                'data' => [
+                    'form_key' => $formKey,
+                    'liff_url' => $form->liff_url,
+                ],
+                'message' => 'フォームキーを再生成しました',
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to regenerate form key: ' . $e->getMessage());
+            
+            return response()->json([
+                'message' => 'フォームキーの再生成に失敗しました',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * 統計情報を取得
+     */
+    public function statistics($id)
+    {
+        $form = HearingForm::find($id);
+
+        if (!$form) {
+            return response()->json([
+                'message' => 'ヒアリングフォームが見つかりません',
+            ], 404);
+        }
+
+        $now = \Carbon\Carbon::now();
+        $startOfMonth = $now->copy()->startOfMonth();
+        $startOfWeek = $now->copy()->startOfWeek();
+        $startOfDay = $now->copy()->startOfDay();
+
+        // 総回答数
+        $totalResponses = $form->formResponses()->where('status', 'completed')->count();
+
+        // 今月の回答数
+        $thisMonth = $form->formResponses()
+            ->where('status', 'completed')
+            ->where('submitted_at', '>=', $startOfMonth)
+            ->count();
+
+        // 今週の回答数
+        $thisWeek = $form->formResponses()
+            ->where('status', 'completed')
+            ->where('submitted_at', '>=', $startOfWeek)
+            ->count();
+
+        // 今日の回答数
+        $today = $form->formResponses()
+            ->where('status', 'completed')
+            ->where('submitted_at', '>=', $startOfDay)
+            ->count();
+
+        // 過去7日間の日別回答数
+        $responseRateByDay = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = $now->copy()->subDays($i);
+            $count = $form->formResponses()
+                ->where('status', 'completed')
+                ->whereDate('submitted_at', $date->toDateString())
+                ->count();
+            
+            $responseRateByDay[] = [
+                'date' => $date->toDateString(),
+                'count' => $count,
+            ];
+        }
+
+        // 平均回答時間（秒）
+        $averageCompletionTime = 150; // TODO: 実装予定
+
+        // タイプ別回答数
+        $responseByType = [
+            'standalone' => $totalResponses,
+            'calendar' => \App\Models\ReservationAnswer::whereHas('reservation', function($q) use ($form) {
+                $q->whereHas('calendar', function($q2) use ($form) {
+                    $q2->where('hearing_form_id', $form->id);
+                });
+            })->distinct('reservation_id')->count(),
+        ];
 
         return response()->json([
-            'data' => $form,
-            'message' => 'LIFF設定を更新しました'
+            'data' => [
+                'total_responses' => $totalResponses,
+                'this_month' => $thisMonth,
+                'this_week' => $thisWeek,
+                'today' => $today,
+                'average_completion_time' => $averageCompletionTime,
+                'response_rate_by_day' => $responseRateByDay,
+                'response_by_type' => $responseByType,
+            ],
         ]);
+    }
+
+    /**
+     * Slack通知のテスト送信
+     */
+    public function testSlackNotification($id)
+    {
+        $form = HearingForm::find($id);
+
+        if (!$form) {
+            return response()->json([
+                'message' => 'ヒアリングフォームが見つかりません',
+            ], 404);
+        }
+
+        if (!$form->slack_webhook) {
+            return response()->json([
+                'message' => 'Slack Webhook URLが設定されていません',
+            ], 400);
+        }
+
+        $slackService = new \App\Services\FormSlackNotificationService();
+        $result = $slackService->sendTestNotification($form);
+
+        if ($result) {
+            return response()->json([
+                'message' => 'テスト通知を送信しました',
+            ]);
+        } else {
+            return response()->json([
+                'message' => 'テスト通知の送信に失敗しました',
+            ], 500);
+        }
     }
 }
 

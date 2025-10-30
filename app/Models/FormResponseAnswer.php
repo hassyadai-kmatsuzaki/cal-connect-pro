@@ -6,22 +6,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class FormSubmissionAnswer extends Model
+class FormResponseAnswer extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'form_submission_id',
+        'form_response_id',
         'hearing_form_item_id',
         'answer_text',
     ];
 
     /**
-     * フォーム送信
+     * フォーム回答
      */
-    public function formSubmission(): BelongsTo
+    public function formResponse(): BelongsTo
     {
-        return $this->belongsTo(FormSubmission::class);
+        return $this->belongsTo(FormResponse::class);
     }
 
     /**

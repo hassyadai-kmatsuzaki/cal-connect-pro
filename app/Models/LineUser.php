@@ -68,6 +68,14 @@ class LineUser extends Model
     }
 
     /**
+     * フォーム回答
+     */
+    public function formResponses(): HasMany
+    {
+        return $this->hasMany(FormResponse::class);
+    }
+
+    /**
      * 未読メッセージ数を取得
      */
     public function getUnreadCountAttribute(): int

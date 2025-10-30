@@ -15,6 +15,9 @@ import CalendarDetail from './pages/tenant/CalendarDetail';
 import CalendarEdit from './pages/tenant/CalendarEdit';
 import LineSettings from './pages/tenant/LineSettings';
 import HearingForms from './pages/tenant/HearingForms';
+import HearingFormList from './pages/tenant/HearingFormList';
+import HearingFormNew from './pages/tenant/HearingFormNew';
+import HearingFormDetail from './pages/tenant/HearingFormDetail';
 import InflowAnalysis from './pages/tenant/InflowAnalysis';
 import UserManagement from './pages/tenant/UserManagement';
 import TagManagement from './pages/tenant/TagManagement';
@@ -25,8 +28,6 @@ import ReservationDetail from './pages/tenant/ReservationDetail';
 import ReservationForm from './pages/tenant/ReservationForm';
 import UserInvitationManagement from './pages/tenant/UserInvitationManagement';
 import InviteAccept from './pages/tenant/InviteAccept';
-import FormSubmissions from './pages/tenant/FormSubmissions';
-import FormSubmissionDetail from './pages/tenant/FormSubmissionDetail';
 
 const App: React.FC = () => {
   const isCentral = isCentralDomain();
@@ -107,10 +108,26 @@ const App: React.FC = () => {
               }
             />
             <Route
+              path="/hearing-forms/new"
+              element={
+                <PrivateRoute>
+                  <HearingFormNew />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/hearing-forms/:id"
+              element={
+                <PrivateRoute>
+                  <HearingFormDetail />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/hearing-forms"
               element={
                 <PrivateRoute>
-                  <HearingForms />
+                  <HearingFormList />
                 </PrivateRoute>
               }
             />
@@ -175,22 +192,6 @@ const App: React.FC = () => {
               element={
                 <PrivateRoute>
                   <ReservationManagement />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/form-submissions/:id"
-              element={
-                <PrivateRoute>
-                  <FormSubmissionDetail />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/form-submissions"
-              element={
-                <PrivateRoute>
-                  <FormSubmissions />
                 </PrivateRoute>
               }
             />

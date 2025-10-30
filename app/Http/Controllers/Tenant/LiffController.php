@@ -7,15 +7,11 @@ use App\Models\LineUser;
 use App\Models\Reservation;
 use App\Models\Calendar;
 use App\Models\InflowSource;
-use App\Models\HearingForm;
-use App\Models\FormSubmission;
-use App\Models\FormSubmissionAnswer;
 use App\Services\LineMessagingService;
 use App\Services\SlackNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class LiffController extends Controller
@@ -898,149 +894,6 @@ class LiffController extends Controller
             
         } catch (\Exception $e) {
             // エラーハンドリング
-        }
-    }
-
-    /**
-     * フォーム取得
-     */
-    public function getHearingForm($tenantId, $formId)
-    {
-        try {
-            $form = HearingForm::with('items')
-                ->where('id', $formId)
-                ->where('standalone_enabled', true)
-                ->where('is_active', true)
-                ->firstOrFail();
-
-            return response()->json(['data' => $form]);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to get hearing form: ' . $e->getMessage());
-            
-            return response()->json([
-                'message' => 'フォームが見つかりません'
-            ], 404);
-        }
-    }
-
-    /**
-     * フォーム送信
-     */
-    public function submitForm(Request $request, $tenantId)
-    {
-        $validator = Validator::make($request->all(), [
-            'hearing_form_id' => 'required|exists:hearing_forms,id',
-            'line_user_id' => 'required|string',
-            'inflow_source_id' => 'nullable|exists:inflow_sources,id',
-            'answers' => 'required|array|min:1',
-            'answers.*.hearing_form_item_id' => 'required|exists:hearing_form_items,id',
-            'answers.*.answer_text' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'バリデーションエラー',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        DB::beginTransaction();
-        try {
-            // フォームが独立送信可能か確認
-            $form = HearingForm::findOrFail($request->hearing_form_id);
-            if (!$form->standalone_enabled) {
-                return response()->json([
-                    'message' => 'このフォームは独立送信が無効です'
-                ], 403);
-            }
-
-            // LINEユーザーを取得または作成
-            $lineUser = LineUser::firstOrCreate(
-                ['line_user_id' => $request->line_user_id],
-                [
-                    'inflow_source_id' => $request->inflow_source_id ?? null,
-                    'is_active' => true,
-                    'last_login_at' => now(),
-                ]
-            );
-
-            // 表示名が未設定の場合は更新
-            if (!$lineUser->display_name && $request->has('display_name')) {
-                $lineUser->update([
-                    'display_name' => $request->display_name,
-                    'picture_url' => $request->picture_url ?? null,
-                ]);
-            }
-
-            // フォーム送信を作成
-            $submission = FormSubmission::create([
-                'hearing_form_id' => $request->hearing_form_id,
-                'line_user_id' => $lineUser->id,
-                'inflow_source_id' => $request->inflow_source_id ?? null,
-                'status' => 'pending',
-                'submitted_at' => now(),
-            ]);
-
-            // 回答を保存
-            foreach ($request->answers as $answer) {
-                FormSubmissionAnswer::create([
-                    'form_submission_id' => $submission->id,
-                    'hearing_form_item_id' => $answer['hearing_form_item_id'],
-                    'answer_text' => $answer['answer_text'],
-                ]);
-            }
-
-            DB::commit();
-
-            // 自動返信を送信
-            if ($form->auto_reply_enabled && $form->auto_reply_message) {
-                $this->sendAutoReply($lineUser, $form->auto_reply_message);
-            }
-
-            // 流入経路のコンバージョンを記録
-            if ($request->inflow_source_id) {
-                $inflowSource = InflowSource::find($request->inflow_source_id);
-                if ($inflowSource) {
-                    $inflowSource->increment('conversions');
-                }
-            }
-
-            $submission->load(['answers.hearingFormItem']);
-
-            return response()->json([
-                'data' => $submission,
-                'message' => $form->standalone_message ?? 'フォームを送信しました'
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Form submission failed: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return response()->json([
-                'message' => 'フォームの送信に失敗しました'
-            ], 500);
-        }
-    }
-
-    /**
-     * 自動返信を送信
-     */
-    private function sendAutoReply(LineUser $lineUser, string $message)
-    {
-        try {
-            $lineMessagingService = app(LineMessagingService::class);
-            $lineMessagingService->sendMessage($lineUser->line_user_id, $message);
-            
-            Log::info('Auto reply sent successfully', [
-                'line_user_id' => $lineUser->line_user_id
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to send auto reply: ' . $e->getMessage(), [
-                'line_user_id' => $lineUser->line_user_id
-            ]);
         }
     }
 }

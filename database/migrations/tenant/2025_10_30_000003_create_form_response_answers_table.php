@@ -6,24 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('form_submission_answers', function (Blueprint $table) {
+        Schema::create('form_response_answers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('form_submission_id')->constrained()->onDelete('cascade');
+            $table->foreignId('form_response_id')->constrained()->onDelete('cascade');
             $table->foreignId('hearing_form_item_id')->constrained()->onDelete('cascade');
-            $table->text('answer_text');
+            $table->text('answer_text')->nullable();
             $table->timestamps();
             
-            $table->unique(['form_submission_id', 'hearing_form_item_id'], 'unique_submission_item');
-            $table->index('form_submission_id');
+            $table->index('form_response_id');
             $table->index('hearing_form_item_id');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('form_submission_answers');
+        Schema::dropIfExists('form_response_answers');
     }
 };
 
