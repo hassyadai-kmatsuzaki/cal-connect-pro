@@ -80,12 +80,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/hearing-forms/{id}/statistics', [HearingFormController::class, 'statistics']);
     Route::post('/hearing-forms/{id}/test-slack', [HearingFormController::class, 'testSlackNotification']);
     
-    // フォーム回答管理
+    // フォーム回答管理（特定パスを先に定義）
+    Route::get('/hearing-forms/{formId}/responses/by-user', [FormResponseController::class, 'byUser']);
+    Route::get('/hearing-forms/{formId}/responses/export', [FormResponseController::class, 'export']);
     Route::get('/hearing-forms/{formId}/responses', [FormResponseController::class, 'index']);
     Route::get('/hearing-forms/{formId}/responses/{responseId}', [FormResponseController::class, 'show']);
     Route::delete('/hearing-forms/{formId}/responses/{responseId}', [FormResponseController::class, 'destroy']);
-    Route::get('/hearing-forms/{formId}/responses/by-user/summary', [FormResponseController::class, 'byUser']);
-    Route::post('/hearing-forms/{formId}/responses/export', [FormResponseController::class, 'export']);
     
     // 流入経路管理
     Route::get('/inflow-sources', [InflowSourceController::class, 'index']);

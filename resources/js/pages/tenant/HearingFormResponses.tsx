@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
-  Container,
   Typography,
   Card,
-  CardContent,
   Button,
   Table,
   TableBody,
@@ -22,7 +20,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Grid,
   Alert,
   CircularProgress,
   Menu,
@@ -38,6 +35,7 @@ import {
   Person as PersonIcon,
   Assignment as AssignmentIcon,
 } from '@mui/icons-material';
+import TenantLayout from '../../layouts/TenantLayout';
 import axios from 'axios';
 
 interface HearingForm {
@@ -137,7 +135,7 @@ const HearingFormResponses: React.FC = () => {
 
     try {
       setDeletingId(selectedMenuResponse.id);
-      await axios.delete(`/api/tenant/form-responses/${selectedMenuResponse.id}`);
+      await axios.delete(`/api/tenant/hearing-forms/${id}/responses/${selectedMenuResponse.id}`);
       setDeleteDialogOpen(false);
       setSelectedMenuResponse(null);
       fetchData();
@@ -153,6 +151,9 @@ const HearingFormResponses: React.FC = () => {
     try {
       const response = await axios.get(`/api/tenant/hearing-forms/${id}/responses/export`, {
         responseType: 'blob',
+        params: {
+          format: 'csv',
+        },
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -162,6 +163,7 @@ const HearingFormResponses: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error('エクスポートエラー:', err);
       alert(err.response?.data?.message || 'エクスポートに失敗しました');
@@ -189,29 +191,34 @@ const HearingFormResponses: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
-        <CircularProgress />
-      </Container>
+      <TenantLayout>
+        <Box sx={{ py: 4, textAlign: 'center' }}>
+          <CircularProgress />
+        </Box>
+      </TenantLayout>
     );
   }
 
   if (error || !form) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">{error || 'フォームが見つかりません'}</Alert>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/hearing-forms')}
-          sx={{ mt: 2 }}
-        >
-          戻る
-        </Button>
-      </Container>
+      <TenantLayout>
+        <Box sx={{ py: 4 }}>
+          <Alert severity="error">{error || 'フォームが見つかりません'}</Alert>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate('/hearing-forms')}
+            sx={{ mt: 2 }}
+          >
+            戻る
+          </Button>
+        </Box>
+      </TenantLayout>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <TenantLayout>
+      <Box sx={{ py: 4 }}>
       {/* ヘッダー */}
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
         <IconButton onClick={() => navigate(`/hearing-forms/${id}`)}>
@@ -468,7 +475,8 @@ const HearingFormResponses: React.FC = () => {
           <ListItemText>削除</ListItemText>
         </MenuItem>
       </Menu>
-    </Container>
+      </Box>
+    </TenantLayout>
   );
 };
 
