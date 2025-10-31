@@ -20,17 +20,14 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon,
+  Dashboard as DashboardIcon,
   CalendarMonth,
   Settings,
   Description,
-  Schedule,
-  EventAvailable,
   Logout,
   AdminPanelSettings,
   Person,
   TrendingUp,
-  People,
-  LocalOffer,
   Assignment,
   PersonAdd,
 } from '@mui/icons-material';
@@ -72,6 +69,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ children }) => {
 
   // Admin用メニュー
   const adminMenuItems = [
+    { text: 'ダッシュボード', icon: <DashboardIcon />, path: '/' },
     { text: 'カレンダー一覧', icon: <CalendarMonth />, path: '/calendars' },
     { text: '予約管理', icon: <Assignment />, path: '/reservations' },
     { text: 'ヒアリングフォーム', icon: <Description />, path: '/hearing-forms' },
@@ -85,6 +83,7 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({ children }) => {
 
   // User用メニュー
   const userMenuItems = [
+    { text: 'ダッシュボード', icon: <DashboardIcon />, path: '/' },
     { text: 'Googleカレンダー連携', icon: <CalendarMonth />, path: '/google-calendar' },
     // { text: '休日・受付時間設定', icon: <Schedule />, path: '/availability' },
     // { text: '予定確認', icon: <EventAvailable />, path: '/reservations' },
